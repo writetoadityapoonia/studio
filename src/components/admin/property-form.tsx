@@ -320,7 +320,7 @@ export function PropertyForm({ property }: PropertyFormProps) {
             <CardHeader>
                 <CardTitle>Project/Unit Details</CardTitle>
                 <CardDescription>All fields in this section are optional.</CardDescription>
-            </Header>
+            </CardHeader>
              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
@@ -367,7 +367,7 @@ export function PropertyForm({ property }: PropertyFormProps) {
                   name="towersAndBlocks"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Towers and Blocks</FormLabel>
+                      <FormLabel>Towers & Blocks</FormLabel>
                       <FormControl>
                         <Input placeholder="e.g., 4 Blocks, 2B + G + 14 Floors" {...field} />
                       </FormControl>
@@ -375,7 +375,7 @@ export function PropertyForm({ property }: PropertyFormProps) {
                     </FormItem>
                   )}
                 />
-                <FormField
+                 <FormField
                   control={form.control}
                   name="possessionTime"
                   render={({ field }) => (
@@ -390,21 +390,20 @@ export function PropertyForm({ property }: PropertyFormProps) {
                 />
              </CardContent>
         </Card>
-        
+
         <Card>
             <CardHeader>
-                <CardTitle>Marketing Content</CardTitle>
-                <CardDescription>Use HTML for formatting the description and specifications.</CardDescription>
-            </Header>
+                <CardTitle>Description & Amenities</CardTitle>
+            </CardHeader>
             <CardContent className="space-y-6">
                 <FormField
                   control={form.control}
                   name="descriptionHtml"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>About the Project (Description)</FormLabel>
+                      <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <Textarea rows={8} placeholder="<h3>Project Title</h3><p>Your description here...</p>" {...field} />
+                        <Textarea rows={6} placeholder="Enter a detailed description (HTML is supported)" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -417,9 +416,11 @@ export function PropertyForm({ property }: PropertyFormProps) {
                     <FormItem>
                       <FormLabel>Amenities</FormLabel>
                       <FormControl>
-                        <Textarea rows={4} placeholder="Swimming Pool, Gym, Landscaped Gardens" {...field} />
+                        <Textarea placeholder="Enter comma-separated amenities" {...field} />
                       </FormControl>
-                      <FormDescription>Enter a comma-separated list of amenities.</FormDescription>
+                      <FormDescription>
+                        Enter multiple amenities separated by commas.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -431,20 +432,19 @@ export function PropertyForm({ property }: PropertyFormProps) {
                     <FormItem>
                       <FormLabel>Specifications</FormLabel>
                       <FormControl>
-                        <Textarea rows={8} placeholder="<h4>Structure</h4><ul><li>RCC framed structure</li></ul>" {...field} />
+                        <Textarea rows={10} placeholder="Enter property specifications (HTML is supported)" {...field} />
                       </FormControl>
+                      <FormDescription>
+                        Use HTML for rich formatting (h4, ul, li tags).
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
             </CardContent>
         </Card>
-        
-        <Separator />
 
-        <div className="flex justify-end">
-            <SubmitButton isEditing={isEditing} />
-        </div>
+        <SubmitButton isEditing={isEditing} />
       </form>
     </Form>
   );
