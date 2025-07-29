@@ -10,10 +10,12 @@ export function ProgressBar() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
+    // Start with a clean slate on navigation
     setIsVisible(true);
-    setProgress(0); // Reset progress on new navigation
+    setProgress(0);
 
-    // A series of timeouts to simulate loading progress
+    // A series of timeouts to simulate loading progress.
+    // This now runs only on the client, avoiding hydration mismatch.
     const timers = [
       setTimeout(() => setProgress(Math.random() * 25 + 10), 50),
       setTimeout(() => setProgress(Math.random() * 30 + 40), 300),
