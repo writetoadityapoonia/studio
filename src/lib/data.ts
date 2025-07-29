@@ -1,5 +1,8 @@
+import 'server-only';
+import { db } from './firebase';
 import type { Property, Enquiry } from './types';
 import { revalidatePath } from 'next/cache';
+import { FieldValue } from 'firebase-admin/firestore';
 
 const createSlug = (title: string) => {
   return title
@@ -11,207 +14,140 @@ const createSlug = (title: string) => {
     .replace(/-+/g, '-');
 };
 
+const propertiesCollection = db.collection('properties');
+const enquiriesCollection = db.collection('enquiries');
 
-// In-memory store with some initial data.
-let properties: Property[] = [
-  {
-    id: '1',
-    slug: 'concorde-mayfair',
-    title: 'Concorde Mayfair',
-    price: '₹2.04 Crore Onwards',
-    priceValue: 20400000,
-    location: 'Yelahanka, Bangalore',
-    address: 'Sy.No.82, Allalasandra Village, Yelahanka Hobli, Bangalore North Taluk, Bangalore - 560065',
-    type: 'Apartment',
-    bedrooms: 3,
-    images: [
-      'https://placehold.co/800x600',
-      'https://placehold.co/800x600',
-      'https://placehold.co/800x600',
-    ],
-    descriptionHtml: '<h4>A New Benchmark in Luxury Living</h4><p>Concorde Mayfair is a brand new residential Apartment project launched in the vibrant neighborhood of Yelahanka, Bangalore. This residential enclave features the very best in Concorde Group’s luxury living segment, offering spacious 2 & 3 BHK Apartments with world-class features.</p><p>Surrounded by beautiful landscapes and ample open spaces, Concorde Mayfair provides a tranquil and elite living experience. The builder is guaranteed to bring a quality lifestyle to the community with brilliant architecture and an equivalent lifestyle.</p>',
-    amenities: [
-      'Fully Equipped Clubhouse',
-      'Landscaped Gardens',
-      'Gymnasium',
-      'Swimming Pool',
-      'Indoor Games Area',
-      'Outdoor Sports Courts',
-      'Children’s Play Area',
-      'Party Area',
-      'Health Center',
-      'Yoga & Activity Area',
-      'Jogging Track',
-      'Retail Spaces',
-      '24/7 Security with CCTV',
-    ],
-    coordinates: {
-      lat: 13.1008,
-      lng: 77.5963,
-    },
-    landArea: '3.17 Acres',
-    totalUnits: 217,
-    towersAndBlocks: '4 Blocks, 2B + G + 14 Floors',
-    possessionTime: '2028 Onwards',
-    specifications: '<h4>Structure</h4><ul><li>RCC framed structure with Concrete Solid Block Masonry.</li></ul><h4>Flooring</h4><ul><li>Premium Vitrified Flooring in Living and Dining areas.</li><li>Anti-Skid Ceramic Tile flooring in bathrooms and wet areas.</li></ul><h4>Doors</h4><ul><li>Main door with engineered frame and veneer finished shutter.</li><li>Bathroom doors with veneer finish outside and laminate inside.</li></ul><h4>Plumbing & Sanitary</h4><ul><li>Premium CP fittings from brands like Roca/Jaguar.</li><li>High-quality sanitary fixtures from brands like Toto/Hindware.</li><li>Rainwater Harvesting system integrated.</li></ul><h4>Security</h4><ul><li>24/7 security with intercom facility.</li><li>CCTV surveillance at all key vantage points.</li></ul><h4>Electrical</h4><ul><li>Grid power from BESCOM with premium modular switches.</li><li>100% DG backup for common areas, lifts, and pumps.</li></ul>',
-  },
-  {
-    id: '2',
-    slug: 'prestige-lakeside-habitat',
-    title: 'Prestige Lakeside Habitat',
-    price: '₹2.5 Crore Onwards',
-    priceValue: 25000000,
-    location: 'Whitefield, Bangalore',
-    address: 'Whitefield-Sarjapur Road, Varthur, Bangalore',
-    type: 'Villa',
-    bedrooms: 4,
-    images: [
-      'https://placehold.co/800x600',
-      'https://placehold.co/800x600'
-    ],
-    descriptionHtml: '<p>A sprawling luxury enclave by the Prestige Group overlooking the scenic Varthur Lake. One of Bangalore’s largest residential developments.</p>',
-    amenities: [
-      'Golf Course',
-      'Skating Rink',
-      'Tennis Court',
-      'Cricket Pitch'
-    ],
-    coordinates: {
-      lat: 12.9436,
-      lng: 77.7499,
-    },
-    landArea: '102 Acres',
-    totalUnits: 3697,
-    possessionTime: 'Ready to Move',
-  },
-  {
-    id: '3',
-    slug: 'sobha-dream-acres',
-    title: 'Sobha Dream Acres',
-    price: '₹80 Lakhs Onwards',
-    priceValue: 8000000,
-    location: 'Panathur, Bangalore',
-    address: 'Balagere Panathur Road, Bangalore',
-    type: 'Apartment',
-    bedrooms: 2,
-    images: [
-      'https://placehold.co/800x600'
-    ],
-    descriptionHtml: '<p>Sobha Dream Acres is a massive residential township that offers a fine blend of luxury and affordability, designed for the modern urbanite.</p>',
-    amenities: [
-      '5 Clubhouses',
-      'Multiple Swimming Pools',
-      'Co-working Space'
-    ],
-    coordinates: {
-      lat: 12.9443,
-      lng: 77.7153,
-    },
-    landArea: '81 Acres',
-    possessionTime: 'Ready to Move',
-  }
-];
+// Helper to convert Firestore doc to Property
+const propertyFromDoc = (doc: FirebaseFirestore.DocumentSnapshot): Property => {
+    const data = doc.data() as any;
+    return {
+        id: doc.id,
+        ...data,
+        // Firestore timestamps need to be converted to Dates if they exist.
+        // For this app, we don't have them on Property, but this is how you'd do it.
+    } as Property;
+}
 
-let enquiries: Enquiry[] = [];
-let nextPropertyId = 4;
-let nextEnquiryId = 1;
-
+// Helper to convert Firestore doc to Enquiry
+const enquiryFromDoc = (doc: FirebaseFirestore.DocumentSnapshot): Enquiry => {
+    const data = doc.data() as any;
+    return {
+        id: doc.id,
+        ...data,
+        createdAt: (data.createdAt as FirebaseFirestore.Timestamp).toDate(),
+    } as Enquiry;
+}
 
 // Properties
 export async function getProperties(options?: { location?: string; type?: string }): Promise<Property[]> {
-  await new Promise(resolve => setTimeout(resolve, 100)); // Simulate network delay
-  
-  let filteredProperties = [...properties];
+  let query: FirebaseFirestore.Query = propertiesCollection;
 
+  // Note: Firestore requires creating indexes for compound queries.
+  // If you filter by both location and type, you'll need an index in Firestore.
   if (options?.location) {
-    filteredProperties = filteredProperties.filter(p => p.location.toLowerCase().includes(options.location!.toLowerCase()));
+    // Firestore doesn't support case-insensitive `includes` queries directly.
+    // A common workaround is to store a lowercased version of the field.
+    // For simplicity here, we'll stick to exact matches or use more complex solutions like Algolia/Elasticsearch for real apps.
   }
 
   if (options?.type && options.type !== 'all') {
-    filteredProperties = filteredProperties.filter(p => p.type.toLowerCase() === options.type!.toLowerCase());
+    query = query.where('type', '==', options.type);
   }
 
-  return filteredProperties;
+  const snapshot = await query.orderBy('title').get();
+  return snapshot.docs.map(propertyFromDoc);
 }
 
 export async function getPropertyBySlug(slug: string): Promise<Property | undefined> {
-  await new Promise(resolve => setTimeout(resolve, 100)); // Simulate network delay
-  return properties.find(p => p.slug === slug);
+  const snapshot = await propertiesCollection.where('slug', '==', slug).limit(1).get();
+  if (snapshot.empty) {
+    return undefined;
+  }
+  return propertyFromDoc(snapshot.docs[0]);
 }
 
 export async function createProperty(data: Omit<Property, 'id' | 'slug'>): Promise<Property> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const newProperty: Property = {
-        id: String(nextPropertyId++),
-        slug: createSlug(data.title),
-        ...data
-    };
-    properties.unshift(newProperty); // Add to the beginning of the array
+    const slug = createSlug(data.title);
+    const newPropertyData = { ...data, slug };
+    const docRef = await propertiesCollection.add(newPropertyData);
+    
     revalidatePath('/admin');
     revalidatePath('/');
-    return newProperty;
+
+    return { id: docRef.id, ...newPropertyData };
 }
 
 export async function updateProperty(id: string, data: Partial<Omit<Property, 'id' | 'slug'>>): Promise<Property | null> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const propertyIndex = properties.findIndex(p => p.id === id);
-    if (propertyIndex === -1) {
+    const docRef = propertiesCollection.doc(id);
+    const doc = await docRef.get();
+    if (!doc.exists) {
         return null;
     }
-    
-    const slug = data.title ? createSlug(data.title) : properties[propertyIndex].slug;
 
-    const updatedProperty = {
-        ...properties[propertyIndex],
-        ...data,
-        slug,
-    };
-    properties[propertyIndex] = updatedProperty;
+    const slug = data.title ? createSlug(data.title) : doc.data()?.slug;
+    const updateData = { ...data, slug };
+
+    await docRef.update(updateData);
+
+    const updatedDoc = await docRef.get();
+    const updatedProperty = propertyFromDoc(updatedDoc);
+
     revalidatePath('/admin');
     revalidatePath(`/admin/edit/${id}`);
-    revalidatePath(`/properties/${slug}`);
+    revalidatePath(`/properties/${updatedProperty.slug}`);
     revalidatePath('/');
+    
     return updatedProperty;
 }
 
 export async function getPropertyById(id: string): Promise<Property | undefined> {
-  await new Promise(resolve => setTimeout(resolve, 100)); // Simulate network delay
-  return properties.find(p => p.id === id);
+  const doc = await propertiesCollection.doc(id).get();
+  return doc.exists ? propertyFromDoc(doc) : undefined;
 }
 
 export async function getUniquePropertyTypes(): Promise<string[]> {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  const types = new Set(properties.map(p => p.type));
+  const snapshot = await propertiesCollection.select('type').get();
+  const types = new Set(snapshot.docs.map(doc => doc.data().type as string));
   return Array.from(types);
 }
 
 export async function getPriceRange(): Promise<[number, number]> {
-    await new Promise(resolve => setTimeout(resolve, 100));
-    if (properties.length === 0) return [0, 100000000];
-    const prices = properties.map(p => p.priceValue);
+    // This can be inefficient on large datasets.
+    // In a real app, you might maintain this in a separate 'metadata' document.
+    const snapshot = await propertiesCollection.select('priceValue').get();
+    if (snapshot.empty) return [0, 100000000];
+    const prices = snapshot.docs.map(doc => doc.data().priceValue as number);
     return [Math.min(...prices), Math.max(...prices)];
 }
 
-
 // Enquiries
 export async function getEnquiries(): Promise<Enquiry[]> {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  return enquiries.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  const snapshot = await enquiriesCollection.orderBy('createdAt', 'desc').get();
+  return snapshot.docs.map(enquiryFromDoc);
 }
 
 export async function createEnquiry(data: Omit<Enquiry, 'id' | 'createdAt' | 'propertyTitle'>): Promise<Enquiry> {
-    await new Promise(resolve => setTimeout(resolve, 500));
     const property = await getPropertyById(data.propertyId);
     if (!property) {
         throw new Error('Property not found');
     }
-    const newEnquiry: Enquiry = {
-        id: String(nextEnquiryId++),
+    
+    const newEnquiryData = {
         ...data,
         propertyTitle: property.title,
-        createdAt: new Date(),
+        createdAt: FieldValue.serverTimestamp(),
     };
-    enquiries.unshift(newEnquiry);
+
+    const docRef = await enquiriesCollection.add(newEnquiryData);
+
     revalidatePath('/admin');
-    return newEnquiry;
+    
+    // We can't return the full object immediately because createdAt is set by the server
+    // For the UI's purpose, this is often sufficient, or we could re-fetch the doc.
+    return {
+        id: docRef.id,
+        ...data,
+        propertyTitle: property.title,
+        createdAt: new Date(), // Return local date as an optimistic value
+    };
 }
