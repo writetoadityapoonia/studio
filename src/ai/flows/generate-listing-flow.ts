@@ -10,7 +10,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
-export const GeneratePropertyListingInputSchema = z.object({
+const GeneratePropertyListingInputSchema = z.object({
   title: z.string(),
   type: z.string(),
   location: z.string(),
@@ -23,7 +23,7 @@ export const GeneratePropertyListingInputSchema = z.object({
 
 export type GeneratePropertyListingInput = z.infer<typeof GeneratePropertyListingInputSchema>;
 
-export const GeneratePropertyListingOutputSchema = z.object({
+const GeneratePropertyListingOutputSchema = z.object({
     descriptionHtml: z.string().describe("A compelling, well-formatted HTML description for the property listing. It should be engaging and highlight the key features. Use <h3> tags for headings and <p> tags for paragraphs."),
     amenities: z.array(z.string()).describe("An array of 4-8 key amenities based on the property details and features."),
 });

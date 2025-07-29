@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Property } from '@/lib/types';
-import { generatePropertyListing, GeneratePropertyListingInput } from '@/ai/flows/generate-listing-flow';
+import { generatePropertyListing, type GeneratePropertyListingInput } from '@/ai/flows/generate-listing-flow';
 import { useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
 
@@ -69,7 +69,18 @@ export function PropertyForm({ property }: PropertyFormProps) {
   });
 
   async function handleGenerate() {
-    const input: GeneratePropertyListingInput = form.getValues();
+    const values = form.getValues();
+    const input: GeneratePropertyListingInput = {
+        title: values.title,
+        type: values.type,
+        location: values.location,
+        price: values.price,
+        bedrooms: values.bedrooms,
+        bathrooms: values.bathrooms,
+        area: values.area,
+        keyFeatures: values.keyFeatures,
+    };
+
     if (!input.keyFeatures) {
         form.setError('keyFeatures', {type: 'manual', message: 'Please provide some key features before generating.'});
         return;
