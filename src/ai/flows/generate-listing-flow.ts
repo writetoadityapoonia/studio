@@ -64,6 +64,7 @@ Generate the HTML description, a list of amenities, and the specifications based
 The description should be engaging and persuasive. Use <h3> for the main heading and <p> for the body.
 The amenities list should contain between 8 and 12 relevant items.
 The specifications section must be in HTML, using <h4> for headings (like "Structure") and <ul>/<li> for the details under each heading.`,
+  model: 'googleai/gemini-pro',
 });
 
 const generateListingFlow = ai.defineFlow(
@@ -74,6 +75,9 @@ const generateListingFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await prompt(input);
-    return output!;
+    if (!output) {
+      throw new Error('Generation failed: No output from model.');
+    }
+    return output;
   }
 );
