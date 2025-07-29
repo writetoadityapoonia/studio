@@ -11,6 +11,8 @@ type PropertyCardProps = {
 };
 
 export function PropertyCard({ property }: PropertyCardProps) {
+  const isPlot = property.type.toLowerCase() === 'plot';
+
   return (
     <Card className="flex flex-col h-full overflow-hidden transition-transform duration-300 hover:scale-105 hover:shadow-primary/20 hover:shadow-lg">
       <Link href={`/properties/${property.id}`} className="block">
@@ -38,9 +40,13 @@ export function PropertyCard({ property }: PropertyCardProps) {
           <MapPin className="w-4 h-4 mr-2"/>
           <span>{property.location}</span>
         </div>
-        <div className="flex justify-between text-sm text-muted-foreground">
-            <div className="flex items-center gap-2"><BedDouble className="w-4 h-4 text-primary"/><span>{property.bedrooms} Beds</span></div>
-            <div className="flex items-center gap-2"><Bath className="w-4 h-4 text-primary"/><span>{property.bathrooms} Baths</span></div>
+        <div className="flex justify-around text-sm text-muted-foreground">
+            {!isPlot && (
+              <>
+                <div className="flex items-center gap-2"><BedDouble className="w-4 h-4 text-primary"/><span>{property.bedrooms} Beds</span></div>
+                <div className="flex items-center gap-2"><Bath className="w-4 h-4 text-primary"/><span>{property.bathrooms} Baths</span></div>
+              </>
+            )}
             <div className="flex items-center gap-2"><AreaChart className="w-4 h-4 text-primary"/><span>{property.area} sqft</span></div>
         </div>
       </CardContent>
