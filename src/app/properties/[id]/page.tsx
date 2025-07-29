@@ -135,7 +135,7 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
               <CardTitle className="font-headline">Make an Enquiry</CardTitle>
             </CardHeader>
             <CardContent>
-              <EnquiryForm />
+              <EnquiryForm propertyId={property.id} />
             </CardContent>
           </Card>
 

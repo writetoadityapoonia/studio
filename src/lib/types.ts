@@ -21,3 +21,13 @@ export type Property = {
   possessionTime?: string;
   specifications?: string;
 };
+
+export type Enquiry = {
+  id: string;
+  name: string;
+  email: string;
+  message: string;
+  propertyId: string;
+  propertyTitle: string; // Denormalized for easy display
+  createdAt: Date;
+};

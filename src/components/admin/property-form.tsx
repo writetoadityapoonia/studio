@@ -12,9 +12,8 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Property } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { usePlacesWidget } from "react-google-autocomplete";
-import { saveProperty, FormState } from '@/lib/actions';
+import { saveProperty, PropertyFormState } from '@/lib/actions';
 
 const formSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
@@ -56,7 +55,7 @@ export function PropertyForm({ property }: PropertyFormProps) {
   const { toast } = useToast();
   const isEditing = !!property;
 
-  const initialState: FormState = { message: '' };
+  const initialState: PropertyFormState = { message: '' };
   const [state, dispatch] = useFormState(saveProperty, initialState);
 
   const form = useForm<PropertyFormValues>({

@@ -1,11 +1,11 @@
 'use server';
 
 import { z } from 'zod';
-import { createProperty, updateProperty } from './data';
+import { createProperty, updateProperty, createEnquiry } from './data';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
-const formSchema = z.object({
+const propertyFormSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
   price: z.string().min(1, { message: 'Price is required.' }),
@@ -27,19 +27,19 @@ const formSchema = z.object({
 });
 
 
-export type FormState = {
+export type PropertyFormState = {
   message: string;
   errors?: Record<string, string[] | undefined>;
 };
 
 
 export async function saveProperty(
-  prevState: FormState,
+  prevState: PropertyFormState,
   formData: FormData
-): Promise<FormState> {
+): Promise<PropertyFormState> {
   const rawData = Object.fromEntries(formData.entries());
   
-  const validatedFields = formSchema.safeParse(rawData);
+  const validatedFields = propertyFormSchema.safeParse(rawData);
 
   if (!validatedFields.success) {
     console.log(validatedFields.error.flatten().fieldErrors);
@@ -86,4 +86,42 @@ export async function saveProperty(
   }
   
   return { message: `Successfully ${id ? 'updated' : 'created'} property.` };
+}
+
+const enquiryFormSchema = z.object({
+  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
+  email: z.string().email({ message: 'Please enter a valid email address.' }),
+  message: z.string().min(10, { message: 'Message must be at least 10 characters.' }),
+  propertyId: z.string(),
+});
+
+export type EnquiryFormState = {
+    message: string;
+    errors?: {
+        name?: string[];
+        email?: string[];
+        message?: string[];
+    }
+}
+
+export async function submitEnquiry(
+    prevState: EnquiryFormState,
+    formData: FormData
+): Promise<EnquiryFormState> {
+    const rawData = Object.fromEntries(formData.entries());
+    const validatedFields = enquiryFormSchema.safeParse(rawData);
+
+    if (!validatedFields.success) {
+        return {
+            message: 'Validation failed.',
+            errors: validatedFields.error.flatten().fieldErrors,
+        };
+    }
+    
+    try {
+        await createEnquiry(validatedFields.data);
+        return { message: 'Enquiry submitted successfully!' };
+    } catch (e) {
+        return { message: 'Database Error: Failed to submit enquiry.' };
+    }
 }

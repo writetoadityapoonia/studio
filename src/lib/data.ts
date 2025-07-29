@@ -1,4 +1,4 @@
-import type { Property } from './types';
+import type { Property, Enquiry } from './types';
 import { revalidatePath } from 'next/cache';
 
 const createSlug = (title: string) => {
@@ -112,8 +112,12 @@ let properties: Property[] = [
   }
 ];
 
-let nextId = 4; // Start IDs after the initial hardcoded ones.
+let enquiries: Enquiry[] = [];
+let nextPropertyId = 4;
+let nextEnquiryId = 1;
 
+
+// Properties
 export async function getProperties(options?: { location?: string; type?: string }): Promise<Property[]> {
   await new Promise(resolve => setTimeout(resolve, 100)); // Simulate network delay
   
@@ -138,7 +142,7 @@ export async function getPropertyBySlug(slug: string): Promise<Property | undefi
 export async function createProperty(data: Omit<Property, 'id' | 'slug'>): Promise<Property> {
     await new Promise(resolve => setTimeout(resolve, 500));
     const newProperty: Property = {
-        id: String(nextId++),
+        id: String(nextPropertyId++),
         slug: createSlug(data.title),
         ...data
     };
@@ -148,7 +152,7 @@ export async function createProperty(data: Omit<Property, 'id' | 'slug'>): Promi
     return newProperty;
 }
 
-export async function updateProperty(id: string, data: Partial<Omit<Property, 'id'>>): Promise<Property | null> {
+export async function updateProperty(id: string, data: Partial<Omit<Property, 'id' | 'slug'>>): Promise<Property | null> {
     await new Promise(resolve => setTimeout(resolve, 500));
     const propertyIndex = properties.findIndex(p => p.id === id);
     if (propertyIndex === -1) {
@@ -186,4 +190,28 @@ export async function getPriceRange(): Promise<[number, number]> {
     if (properties.length === 0) return [0, 100000000];
     const prices = properties.map(p => p.priceValue);
     return [Math.min(...prices), Math.max(...prices)];
+}
+
+
+// Enquiries
+export async function getEnquiries(): Promise<Enquiry[]> {
+  await new Promise(resolve => setTimeout(resolve, 100));
+  return enquiries.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+}
+
+export async function createEnquiry(data: Omit<Enquiry, 'id' | 'createdAt' | 'propertyTitle'>): Promise<Enquiry> {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const property = await getPropertyById(data.propertyId);
+    if (!property) {
+        throw new Error('Property not found');
+    }
+    const newEnquiry: Enquiry = {
+        id: String(nextEnquiryId++),
+        ...data,
+        propertyTitle: property.title,
+        createdAt: new Date(),
+    };
+    enquiries.unshift(newEnquiry);
+    revalidatePath('/admin');
+    return newEnquiry;
 }
