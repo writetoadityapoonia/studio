@@ -10,9 +10,6 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Property } from '@/lib/types';
-import { generatePropertyListing, type GeneratePropertyListingInput } from '@/ai/flows/generate-listing-flow';
-import { useState } from 'react';
-import { LoaderCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 
@@ -30,8 +27,6 @@ const formSchema = z.object({
   amenities: z.string().min(1, {message: 'Please add at least one amenity'}).transform(val => val.split(',').map(s => s.trim())),
   lat: z.coerce.number(),
   lng: z.coerce.number(),
-  keyFeatures: z.string().min(10, { message: 'Please provide some key features for generation.' }),
-  // New fields
   landArea: z.string().optional(),
   totalUnits: z.coerce.number().optional(),
   towersAndBlocks: z.string().optional(),
@@ -46,8 +41,7 @@ type PropertyFormProps = {
 };
 
 export function PropertyForm({ property }: PropertyFormProps) {
-    const { toast } = useToast();
-    const [isGenerating, setIsGenerating] = useState(false);
+  const { toast } = useToast();
 
   const form = useForm<PropertyFormValues>({
     resolver: zodResolver(formSchema),
@@ -57,7 +51,6 @@ export function PropertyForm({ property }: PropertyFormProps) {
         amenities: property.amenities.join(', '),
         lat: property.coordinates.lat,
         lng: property.coordinates.lng,
-        keyFeatures: '',
     } : {
       title: '',
       price: 0,
@@ -72,7 +65,6 @@ export function PropertyForm({ property }: PropertyFormProps) {
       amenities: '',
       lat: 0,
       lng: 0,
-      keyFeatures: '',
       landArea: '',
       totalUnits: 0,
       towersAndBlocks: '',
@@ -81,50 +73,8 @@ export function PropertyForm({ property }: PropertyFormProps) {
     },
   });
 
-  async function handleGenerate() {
-    const values = form.getValues();
-    const input: GeneratePropertyListingInput = {
-        title: values.title,
-        type: values.type,
-        location: values.location,
-        price: values.price,
-        bedrooms: values.bedrooms,
-        bathrooms: values.bathrooms,
-        area: values.area,
-        keyFeatures: values.keyFeatures,
-        landArea: values.landArea,
-        possessionTime: values.possessionTime,
-    };
-
-    if (!input.keyFeatures) {
-        form.setError('keyFeatures', {type: 'manual', message: 'Please provide some key features before generating.'});
-        return;
-    }
-    
-    setIsGenerating(true);
-    try {
-        const result = await generatePropertyListing(input);
-        form.setValue('descriptionHtml', result.descriptionHtml, { shouldValidate: true });
-        form.setValue('amenities', result.amenities.join(', '), { shouldValidate: true });
-        form.setValue('specifications', result.specifications, { shouldValidate: true });
-        toast({
-            title: 'Content Generated!',
-            description: 'The description, amenities, and specifications have been filled in.',
-        })
-    } catch(e) {
-        toast({
-            title: 'Generation Failed',
-            description: 'Could not generate content. Please try again.',
-            variant: 'destructive',
-        });
-    } finally {
-        setIsGenerating(false);
-    }
-  }
-
   function onSubmit(values: PropertyFormValues) {
     console.log(values);
-    // Here you would typically call a server action or API to save the property
     toast({
         title: `Property ${property ? 'Updated' : 'Created'}!`,
         description: `The property "${values.title}" has been successfully saved.`,
@@ -194,6 +144,22 @@ export function PropertyForm({ property }: PropertyFormProps) {
                       )}
                     />
                 </div>
+                 <FormField
+                  control={form.control}
+                  name="images"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Image URLs</FormLabel>
+                       <FormControl>
+                        <Textarea placeholder="Enter comma-separated image URLs" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Enter multiple image URLs separated by commas.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
             </CardContent>
         </Card>
 
@@ -211,6 +177,7 @@ export function PropertyForm({ property }: PropertyFormProps) {
                       <FormControl>
                         <Input placeholder="e.g., Yelahanka, Bangalore" {...field} />
                       </FormControl>
+                      <FormDescription>A short, user-friendly location name (e.g., for filtering).</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -262,6 +229,7 @@ export function PropertyForm({ property }: PropertyFormProps) {
         <Card>
             <CardHeader>
                 <CardTitle>Project/Unit Details</CardTitle>
+                <CardDescription>All fields in this section are optional.</CardDescription>
             </CardHeader>
              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
@@ -357,36 +325,11 @@ export function PropertyForm({ property }: PropertyFormProps) {
                 />
              </CardContent>
         </Card>
-
-        <Card className="bg-secondary/50">
-            <CardHeader>
-                 <CardTitle>AI Content Generation</CardTitle>
-                 <CardDescription>Provide some key features, and we'll generate the description, amenities, and specifications for you.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                 <FormField
-                  control={form.control}
-                  name="keyFeatures"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Key Features & Highlights</FormLabel>
-                      <FormControl>
-                        <Textarea rows={4} placeholder="e.g., brand new residential project, luxury living, beautiful landscapes, excellent connectivity, brilliant architecture" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="button" variant="secondary" onClick={handleGenerate} disabled={isGenerating}>
-                    {isGenerating && <LoaderCircle className="animate-spin mr-2" />}
-                    Generate Content with AI
-                </Button>
-            </CardContent>
-        </Card>
         
         <Card>
             <CardHeader>
                 <CardTitle>Marketing Content</CardTitle>
+                <CardDescription>Use HTML for formatting the description and specifications.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
                 <FormField
@@ -396,7 +339,7 @@ export function PropertyForm({ property }: PropertyFormProps) {
                     <FormItem>
                       <FormLabel>About the Project (Description)</FormLabel>
                       <FormControl>
-                        <Textarea rows={8} placeholder="Provide a detailed description of the project. You can use HTML for formatting." {...field} />
+                        <Textarea rows={8} placeholder="<h3>Project Title</h3><p>Your description here...</p>" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -409,8 +352,9 @@ export function PropertyForm({ property }: PropertyFormProps) {
                     <FormItem>
                       <FormLabel>Amenities</FormLabel>
                       <FormControl>
-                        <Textarea rows={4} placeholder="Enter comma-separated amenities (e.g., Swimming Pool, Gym, Landscaped Gardens)" {...field} />
+                        <Textarea rows={4} placeholder="Swimming Pool, Gym, Landscaped Gardens" {...field} />
                       </FormControl>
+                      <FormDescription>Enter a comma-separated list of amenities.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -422,20 +366,7 @@ export function PropertyForm({ property }: PropertyFormProps) {
                     <FormItem>
                       <FormLabel>Specifications</FormLabel>
                       <FormControl>
-                        <Textarea rows={8} placeholder="Provide project specifications. You can use HTML or Markdown for formatting." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="images"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Image URLs</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Enter comma-separated image URLs" {...field} />
+                        <Textarea rows={8} placeholder="<h4>Structure</h4><ul><li>RCC framed structure</li></ul>" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
