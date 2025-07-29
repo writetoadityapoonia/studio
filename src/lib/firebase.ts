@@ -16,8 +16,8 @@ if (!admin.apps.length) {
       credential: admin.credential.cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        // The private key must be formatted correctly in the .env file.
-        privateKey: process.env.FIREBASE_PRIVATE_KEY,
+        // The private key must be formatted with escaped newlines in the .env file.
+        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
       }),
     });
   } catch (error: any) {
