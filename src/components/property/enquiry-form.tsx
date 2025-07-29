@@ -72,14 +72,14 @@ export function EnquiryForm({ propertyId }: EnquiryFormProps) {
     }
   }, [state, form, toast]);
   
-  const actionWithPropertyId = (formData: FormData) => {
+  const formAction = (formData: FormData) => {
       formData.append('propertyId', propertyId);
       dispatch(formData);
   }
 
   return (
     <Form {...form}>
-      <form action={actionWithPropertyId} className="space-y-4">
+      <form action={formAction} className="space-y-4">
         <FormField
           control={form.control}
           name="name"
