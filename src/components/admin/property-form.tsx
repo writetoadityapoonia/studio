@@ -3,13 +3,16 @@
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Property } from '@/lib/types';
+import { generatePropertyListing, GeneratePropertyListingInput } from '@/ai/flows/generate-listing-flow';
+import { useState } from 'react';
+import { LoaderCircle } from 'lucide-react';
 
 const formSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
@@ -25,6 +28,7 @@ const formSchema = z.object({
   amenities: z.string().min(1, {message: 'Please add at least one amenity'}).transform(val => val.split(',').map(s => s.trim())),
   lat: z.coerce.number(),
   lng: z.coerce.number(),
+  keyFeatures: z.string().min(10, { message: 'Please provide some key features for generation.' }),
 });
 
 type PropertyFormValues = z.infer<typeof formSchema>;
@@ -35,6 +39,8 @@ type PropertyFormProps = {
 
 export function PropertyForm({ property }: PropertyFormProps) {
     const { toast } = useToast();
+    const [isGenerating, setIsGenerating] = useState(false);
+
   const form = useForm<PropertyFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: property ? {
@@ -42,7 +48,8 @@ export function PropertyForm({ property }: PropertyFormProps) {
         images: property.images.join(', '),
         amenities: property.amenities.join(', '),
         lat: property.coordinates.lat,
-        lng: property.coordinates.lng
+        lng: property.coordinates.lng,
+        keyFeatures: '',
     } : {
       title: '',
       price: 0,
@@ -57,8 +64,36 @@ export function PropertyForm({ property }: PropertyFormProps) {
       amenities: '',
       lat: 0,
       lng: 0,
+      keyFeatures: '',
     },
   });
+
+  async function handleGenerate() {
+    const input: GeneratePropertyListingInput = form.getValues();
+    if (!input.keyFeatures) {
+        form.setError('keyFeatures', {type: 'manual', message: 'Please provide some key features before generating.'});
+        return;
+    }
+    
+    setIsGenerating(true);
+    try {
+        const result = await generatePropertyListing(input);
+        form.setValue('descriptionHtml', result.descriptionHtml, { shouldValidate: true });
+        form.setValue('amenities', result.amenities.join(', '), { shouldValidate: true });
+        toast({
+            title: 'Content Generated!',
+            description: 'The description and amenities have been filled in.',
+        })
+    } catch(e) {
+        toast({
+            title: 'Generation Failed',
+            description: 'Could not generate content. Please try again.',
+            variant: 'destructive',
+        });
+    } finally {
+        setIsGenerating(false);
+    }
+  }
 
   function onSubmit(values: PropertyFormValues) {
     console.log(values);
@@ -217,6 +252,29 @@ export function PropertyForm({ property }: PropertyFormProps) {
                     </FormItem>
                   )}
                 />
+            </div>
+
+            <div className="md:col-span-2 space-y-4 p-4 border rounded-lg bg-secondary/50">
+                 <FormField
+                  control={form.control}
+                  name="keyFeatures"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Key Features</FormLabel>
+                      <FormControl>
+                        <Textarea rows={3} placeholder="e.g., newly renovated kitchen, stunning city views, quiet neighborhood" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Provide some key features, and we'll generate the description and amenities for you.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="button" variant="secondary" onClick={handleGenerate} disabled={isGenerating}>
+                    {isGenerating && <LoaderCircle className="animate-spin mr-2" />}
+                    Generate Content
+                </Button>
             </div>
             
             <FormField
