@@ -6,8 +6,6 @@ export type Property = {
   address: string;
   type: string;
   bedrooms: number;
-  bathrooms: number;
-  area: number;
   images: string[];
   descriptionHtml: string;
   amenities: string[];

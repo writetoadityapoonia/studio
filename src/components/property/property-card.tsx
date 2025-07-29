@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { BedDouble, Bath, AreaChart, MapPin } from 'lucide-react';
+import { BedDouble, AreaChart, MapPin } from 'lucide-react';
 
 type PropertyCardProps = {
   property: Property;
@@ -42,12 +42,11 @@ export function PropertyCard({ property }: PropertyCardProps) {
         </div>
         <div className="flex justify-around text-sm text-muted-foreground">
             {!isPlot && (
-              <>
-                <div className="flex items-center gap-2"><BedDouble className="w-4 h-4 text-primary"/><span>{property.bedrooms} Beds</span></div>
-                <div className="flex items-center gap-2"><Bath className="w-4 h-4 text-primary"/><span>{property.bathrooms} Baths</span></div>
-              </>
+              <div className="flex items-center gap-2"><BedDouble className="w-4 h-4 text-primary"/><span>{property.bedrooms} BHK+</span></div>
             )}
-            <div className="flex items-center gap-2"><AreaChart className="w-4 h-4 text-primary"/><span>{property.area} sqft</span></div>
+            {property.landArea && (
+                <div className="flex items-center gap-2"><AreaChart className="w-4 h-4 text-primary"/><span>{property.landArea}</span></div>
+            )}
         </div>
       </CardContent>
       <CardFooter className="flex justify-between items-center">

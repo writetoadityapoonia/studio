@@ -20,8 +20,6 @@ const formSchema = z.object({
   address: z.string().min(10, { message: 'Address is required.' }),
   type: z.string().min(3, { message: 'Type must be at least 3 characters.' }),
   bedrooms: z.coerce.number().int().min(0, { message: 'Bedrooms cannot be negative.' }),
-  bathrooms: z.coerce.number().int().min(0, { message: 'Bathrooms cannot be negative.' }),
-  area: z.coerce.number().min(100, { message: 'Area must be at least 100 sqft.' }),
   images: z.string().min(1, {message: 'Please add at least one image URL'}).transform(val => val.split(',').map(s => s.trim())),
   descriptionHtml: z.string().min(20, { message: 'Description must be at least 20 characters.' }),
   amenities: z.string().min(1, {message: 'Please add at least one amenity'}).transform(val => val.split(',').map(s => s.trim())),
@@ -57,10 +55,8 @@ export function PropertyForm({ property }: PropertyFormProps) {
       price: 0,
       location: '',
       address: '',
-      type: 'House',
+      type: 'Apartment',
       bedrooms: 3,
-      bathrooms: 2,
-      area: 2000,
       images: '',
       descriptionHtml: '',
       amenities: '',
@@ -269,36 +265,11 @@ export function PropertyForm({ property }: PropertyFormProps) {
                   name="bedrooms"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Bedrooms (starting from)</FormLabel>
+                      <FormLabel>Unit Types (e.g., 2, 3 BHK)</FormLabel>
                       <FormControl>
                         <Input type="number" {...field} />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="bathrooms"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Bathrooms (starting from)</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="area"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Area (sqft, starting from)</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
+                       <FormDescription>Starting from (e.g., 2 for 2BHK)</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

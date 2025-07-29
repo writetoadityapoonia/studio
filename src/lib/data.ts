@@ -9,8 +9,6 @@ const properties: Property[] = [
     address: '123 Main St, New York, NY 10001',
     type: 'Apartment',
     bedrooms: 2,
-    bathrooms: 2,
-    area: 1500,
     images: ['https://placehold.co/800x600', 'https://placehold.co/800x600', 'https://placehold.co/800x600'],
     descriptionHtml: `
       <h3 class="font-bold text-lg mb-2">Luxury Living in the Heart of the City</h3>
@@ -33,8 +31,6 @@ const properties: Property[] = [
     address: '456 Oak Ave, Austin, TX 78701',
     type: 'House',
     bedrooms: 4,
-    bathrooms: 3,
-    area: 2800,
     images: ['https://placehold.co/800x600', 'https://placehold.co/800x600', 'https://placehold.co/800x600'],
     descriptionHtml: `
       <h3 class="font-bold text-lg mb-2">Your Dream Family Home</h3>
@@ -57,8 +53,6 @@ const properties: Property[] = [
     address: '789 Pacific Coast Hwy, Malibu, CA 90265',
     type: 'Villa',
     bedrooms: 5,
-    bathrooms: 6,
-    area: 5000,
     images: ['https://placehold.co/800x600', 'https://placehold.co/800x600', 'https://placehold.co/800x600'],
     descriptionHtml: `
       <h3 class="font-bold text-lg mb-2">Oceanfront Paradise</h3>
@@ -79,8 +73,6 @@ const properties: Property[] = [
     address: '321 Bay St, San Francisco, CA 94133',
     type: 'Apartment',
     bedrooms: 1,
-    bathrooms: 1,
-    area: 950,
     images: ['https://placehold.co/800x600', 'https://placehold.co/800x600', 'https://placehold.co/800x600'],
     descriptionHtml: `
       <h3 class="font-bold text-lg mb-2">Stylish City Pad</h3>
@@ -101,8 +93,6 @@ const properties: Property[] = [
     address: '101 Pine Ridge Rd, Denver, CO 80202',
     type: 'House',
     bedrooms: 5,
-    bathrooms: 4,
-    area: 4200,
     images: ['https://placehold.co/800x600', 'https://placehold.co/800x600', 'https://placehold.co/800x600'],
     descriptionHtml: `
       <h3 class="font-bold text-lg mb-2">Your Gateway to the Rockies</h3>
@@ -123,8 +113,6 @@ const properties: Property[] = [
     address: '555 Ocean Dr, Miami, FL 33139',
     type: 'Villa',
     bedrooms: 6,
-    bathrooms: 7,
-    area: 6000,
     images: ['https://placehold.co/800x600', 'https://placehold.co/800x600', 'https://placehold.co/800x600'],
     descriptionHtml: `
       <h3 class="font-bold text-lg mb-2">The Ultimate Miami Lifestyle</h3>
