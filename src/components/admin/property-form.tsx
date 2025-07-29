@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useFormState, useFormStatus } from 'react-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,6 +14,7 @@ import { Property } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { usePlacesWidget } from "react-google-autocomplete";
+import { saveProperty, FormState } from '@/lib/actions';
 
 const formSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
@@ -19,9 +22,9 @@ const formSchema = z.object({
   address: z.string().min(10, { message: 'Address is required.' }),
   type: z.string().min(3, { message: 'Type must be at least 3 characters.' }),
   bedrooms: z.coerce.number().int().min(0, { message: 'Bedrooms cannot be negative.' }),
-  images: z.string().min(1, {message: 'Please add at least one image URL'}).transform(val => val.split(',').map(s => s.trim())),
+  images: z.string().min(1, {message: 'Please add at least one image URL'}),
   descriptionHtml: z.string().min(20, { message: 'Description must be at least 20 characters.' }),
-  amenities: z.string().min(1, {message: 'Please add at least one amenity'}).transform(val => val.split(',').map(s => s.trim())),
+  amenities: z.string().min(1, {message: 'Please add at least one amenity'}),
   lat: z.coerce.number(),
   lng: z.coerce.number(),
   location: z.string().min(2, { message: 'Location is required.' }),
@@ -38,8 +41,22 @@ type PropertyFormProps = {
   property?: Property;
 };
 
+function SubmitButton({ isEditing }: { isEditing: boolean }) {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button type="submit" size="lg" disabled={pending}>
+      {pending ? 'Saving...' : (isEditing ? 'Save Changes' : 'Create Property')}
+    </Button>
+  );
+}
+
 export function PropertyForm({ property }: PropertyFormProps) {
   const { toast } = useToast();
+  const isEditing = !!property;
+
+  const initialState: FormState = { message: '' };
+  const [state, dispatch] = useFormState(saveProperty, initialState);
 
   const form = useForm<PropertyFormValues>({
     resolver: zodResolver(formSchema),
@@ -67,7 +84,30 @@ export function PropertyForm({ property }: PropertyFormProps) {
       possessionTime: '',
       specifications: '',
     },
+     // Set mode to 'all' to trigger validation on blur, change, etc.
+    mode: 'all',
   });
+
+  useEffect(() => {
+    if (state.message) {
+      toast({
+        title: state.message.includes('Successfully') ? 'Success!' : 'Error',
+        description: state.message,
+        variant: state.message.includes('Successfully') ? 'default' : 'destructive',
+      });
+    }
+    if (state.errors) {
+        Object.entries(state.errors).forEach(([field, errors]) => {
+            if (errors) {
+                form.setError(field as keyof PropertyFormValues, {
+                    type: 'manual',
+                    message: errors.join(', '),
+                });
+            }
+        });
+    }
+  }, [state, toast, form]);
+
 
   const { ref: placesRef } = usePlacesWidget<HTMLInputElement>({
     apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
@@ -88,10 +128,10 @@ export function PropertyForm({ property }: PropertyFormProps) {
         location = place.address_components?.[0]?.long_name || '';
       }
       
-      form.setValue('address', address);
-      form.setValue('location', location);
-      if(lat) form.setValue('lat', lat);
-      if(lng) form.setValue('lng', lng);
+      form.setValue('address', address, { shouldValidate: true });
+      form.setValue('location', location, { shouldValidate: true });
+      if(lat) form.setValue('lat', lat, { shouldValidate: true });
+      if(lng) form.setValue('lng', lng, { shouldValidate: true });
     },
     options: {
       types: ["address"],
@@ -101,20 +141,32 @@ export function PropertyForm({ property }: PropertyFormProps) {
   });
 
 
-  function onSubmit(values: PropertyFormValues) {
-    console.log(values);
-    toast({
-        title: `Property ${property ? 'Updated' : 'Created'}!`,
-        description: `The property "${values.title}" has been successfully saved.`,
-    });
-    if (!property) {
-        form.reset();
-    }
-  }
+  // We need to wrap the server action call in a function
+  const handleFormSubmit = form.handleSubmit((data) => {
+      // Create a new FormData object
+      const formData = new FormData();
+      
+      // Append all form data to it
+      if (property) {
+        formData.append('id', property.id);
+      }
+      Object.entries(data).forEach(([key, value]) => {
+          // Handle arrays by joining them into a comma-separated string
+          if (Array.isArray(value)) {
+              formData.append(key, value.join(', '));
+          } else if (value !== undefined && value !== null) {
+              formData.append(key, String(value));
+          }
+      });
+      
+      // Dispatch the action with the form data
+      dispatch(formData);
+  });
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form action={dispatch} className="space-y-8">
+        {property?.id && <input type="hidden" name="id" value={property.id} />}
         <Card>
             <CardHeader>
                 <CardTitle>Basic Information</CardTitle>
@@ -381,13 +433,9 @@ export function PropertyForm({ property }: PropertyFormProps) {
         <Separator />
 
         <div className="flex justify-end">
-            <Button type="submit" size="lg">
-              {property ? 'Save Changes' : 'Create Property'}
-            </Button>
+            <SubmitButton isEditing={isEditing} />
         </div>
       </form>
     </Form>
   );
 }
-
-    
