@@ -1,7 +1,7 @@
 export type Property = {
   id: string;
   title: string;
-  price: number;
+  price: string;
   location: string;
   address: string;
   type: string;

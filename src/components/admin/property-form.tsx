@@ -12,11 +12,10 @@ import { Property } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { usePlacesWidget } from "react-google-autocomplete";
-import { useEffect } from 'react';
 
 const formSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
-  price: z.coerce.number().min(1, { message: 'Price must be a positive number.' }),
+  price: z.string().min(1, { message: 'Price is required.' }),
   address: z.string().min(10, { message: 'Address is required.' }),
   type: z.string().min(3, { message: 'Type must be at least 3 characters.' }),
   bedrooms: z.coerce.number().int().min(0, { message: 'Bedrooms cannot be negative.' }),
@@ -52,7 +51,7 @@ export function PropertyForm({ property }: PropertyFormProps) {
         lng: property.coordinates.lng,
     } : {
       title: '',
-      price: 0,
+      price: '',
       location: '',
       address: '',
       type: 'Apartment',
@@ -140,9 +139,9 @@ export function PropertyForm({ property }: PropertyFormProps) {
                       name="price"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Starting Price ($)</FormLabel>
+                          <FormLabel>Starting Price (Text)</FormLabel>
                           <FormControl>
-                            <Input type="number" placeholder="e.g., 2000000" {...field} />
+                            <Input placeholder="e.g., ₹2.04 Crore Onwards" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

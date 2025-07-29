@@ -53,7 +53,7 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
                 </div>
                 <Badge variant="secondary" className="text-lg">{property.type}</Badge>
             </div>
-            <p className="text-4xl font-bold text-primary mt-4">Starts from ${property.price.toLocaleString()}</p>
+            <p className="text-3xl font-bold text-primary mt-4">Starts from {property.price}</p>
           </div>
 
           <Separator className="my-8" />

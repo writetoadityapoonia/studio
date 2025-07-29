@@ -50,8 +50,8 @@ export function PropertyCard({ property }: PropertyCardProps) {
         </div>
       </CardContent>
       <CardFooter className="flex justify-between items-center">
-        <p className="text-2xl font-bold text-primary">
-          ${property.price.toLocaleString()}
+        <p className="text-xl font-bold text-primary">
+          {property.price}
         </p>
         <Button asChild>
           <Link href={`/properties/${property.id}`}>View Details</Link>
