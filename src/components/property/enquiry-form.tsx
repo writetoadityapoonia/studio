@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useActionState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -46,7 +46,7 @@ export function EnquiryForm({ propertyId }: EnquiryFormProps) {
   });
 
   const initialState: EnquiryFormState = { message: '' };
-  const [state, dispatch] = useFormState(submitEnquiry, initialState);
+  const [state, dispatch] = useActionState(submitEnquiry, initialState);
 
   useEffect(() => {
       if (state.message) {

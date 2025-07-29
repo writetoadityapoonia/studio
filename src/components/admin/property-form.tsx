@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState, useEffect } from 'react';
+import { useFormStatus } from 'react-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -56,7 +56,7 @@ export function PropertyForm({ property }: PropertyFormProps) {
   const isEditing = !!property;
 
   const initialState: PropertyFormState = { message: '' };
-  const [state, dispatch] = useFormState(saveProperty, initialState);
+  const [state, dispatch] = useActionState(saveProperty, initialState);
 
   const form = useForm<PropertyFormValues>({
     resolver: zodResolver(formSchema),
