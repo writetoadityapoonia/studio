@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import type { Property } from '@/lib/types';
 import { PropertyCard } from './property-card';
 import { PropertyFilters } from './property-filters';
 import { Button } from '@/components/ui/button';
+import { haversineDistance } from '@/lib/utils';
 
 const ITEMS_PER_PAGE = 6;
+const SEARCH_RADIUS_KM = 15;
 
 type PropertiesViewProps = {
   initialProperties: Property[];
@@ -16,7 +18,11 @@ type PropertiesViewProps = {
 
 export default function PropertiesView({ initialProperties, propertyTypes, priceRange }: PropertiesViewProps) {
   const [filters, setFilters] = useState({
-    location: '',
+    location: {
+      description: '',
+      lat: null as number | null,
+      lng: null as number | null,
+    },
     type: 'all',
     price: priceRange[1],
   });
@@ -26,12 +32,32 @@ export default function PropertiesView({ initialProperties, propertyTypes, price
     // Reset price filter when the available range changes
     setFilters(f => ({ ...f, price: priceRange[1] }));
   }, [priceRange]);
+  
+  const handleFilterChange = useCallback((newFilters: Partial<typeof filters>) => {
+    setFilters(prev => ({...prev, ...newFilters}));
+    setVisibleCount(ITEMS_PER_PAGE); // Reset pagination on filter change
+  }, []);
 
   const filteredProperties = useMemo(() => {
     return initialProperties.filter((property) => {
-      const locationMatch = property.location.toLowerCase().includes(filters.location.toLowerCase());
       const typeMatch = filters.type === 'all' || property.type.toLowerCase() === filters.type.toLowerCase();
       const priceMatch = property.priceValue <= filters.price;
+      
+      const locationMatch = (() => {
+        if (filters.location.lat && filters.location.lng) {
+          const distance = haversineDistance(
+            { lat: filters.location.lat, lng: filters.location.lng },
+            property.coordinates
+          );
+          return distance <= SEARCH_RADIUS_KM;
+        }
+        // If no location is selected, try to match by the text description (fallback)
+        if (filters.location.description) {
+            return property.location.toLowerCase().includes(filters.location.description.toLowerCase());
+        }
+        return true; // If no location filter is applied, all locations match
+      })();
+      
       return locationMatch && typeMatch && priceMatch;
     });
   }, [initialProperties, filters]);
@@ -48,7 +74,7 @@ export default function PropertiesView({ initialProperties, propertyTypes, price
       <aside className="w-full lg:w-1/4 xl:w-1/5">
         <PropertyFilters
           filters={filters}
-          onFilterChange={setFilters}
+          onFilterChange={handleFilterChange}
           propertyTypes={propertyTypes}
           priceRange={priceRange}
         />

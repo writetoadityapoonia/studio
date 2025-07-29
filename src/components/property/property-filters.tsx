@@ -8,17 +8,24 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Slider } from '@/components/ui/slider';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Filter } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
+import { usePlacesWidget } from "react-google-autocomplete";
+
+type LocationFilter = {
+  description: string;
+  lat: number | null;
+  lng: number | null;
+};
 
 type Filters = {
-  location: string;
+  location: LocationFilter,
   type: string;
   price: number;
 };
 
 type PropertyFiltersProps = {
   filters: Filters;
-  onFilterChange: (filters: Filters) => void;
+  onFilterChange: (filters: Partial<Filters>) => void;
   propertyTypes: string[];
   priceRange: [number, number];
 };
@@ -35,14 +42,57 @@ function formatPrice(value: number) {
 
 function FiltersContent({ filters, onFilterChange, propertyTypes, priceRange }: PropertyFiltersProps) {
   const [minPrice, maxPrice] = priceRange;
+  const locationInputRef = useRef<HTMLInputElement>(null);
 
   const handlePriceChange = (value: number[]) => {
-    onFilterChange({ ...filters, price: value[0] });
+    onFilterChange({ price: value[0] });
   };
   
   const handleTypeChange = (value: string) => {
-    onFilterChange({ ...filters, type: value });
+    onFilterChange({ type: value });
   };
+  
+  const handleLocationTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDescription = e.target.value;
+    onFilterChange({ 
+      location: { 
+        description: newDescription,
+        lat: newDescription ? filters.location.lat : null,
+        lng: newDescription ? filters.location.lng : null
+      }
+    });
+  }
+
+  const { ref: placesRef } = usePlacesWidget<HTMLInputElement>({
+    apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+    onPlaceSelected: (place) => {
+      if (!place) return;
+      
+      const lat = place.geometry?.location?.lat() ?? null;
+      const lng = place.geometry?.location?.lng() ?? null;
+      
+      onFilterChange({
+        location: {
+          description: place.formatted_address || '',
+          lat,
+          lng
+        }
+      });
+    },
+    options: {
+      types: ["geocode"],
+      fields: ["formatted_address", "geometry.location"],
+      componentRestrictions: { country: "in" },
+    }
+  });
+
+  // Manually assign the ref to the input element
+  useEffect(() => {
+    if (locationInputRef.current) {
+        (placesRef as React.MutableRefObject<HTMLInputElement | null>).current = locationInputRef.current;
+    }
+  }, [placesRef]);
+
 
   const selectedPriceFormatted = useMemo(() => formatPrice(filters.price), [filters.price]);
 
@@ -52,9 +102,10 @@ function FiltersContent({ filters, onFilterChange, propertyTypes, priceRange }: 
         <Label htmlFor="location">Location</Label>
         <Input
           id="location"
-          placeholder="e.g., Yelahanka"
-          value={filters.location}
-          onChange={(e) => onFilterChange({ ...filters, location: e.target.value })}
+          ref={locationInputRef}
+          placeholder="Search for a city or area..."
+          value={filters.location.description}
+          onChange={handleLocationTextChange}
         />
       </div>
 
