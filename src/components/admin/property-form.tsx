@@ -12,11 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Property } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { usePlacesWidget } from "react-google-autocomplete";
+import { useEffect } from 'react';
 
 const formSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
   price: z.coerce.number().min(1, { message: 'Price must be a positive number.' }),
-  location: z.string().min(2, { message: 'Location is required.' }),
   address: z.string().min(10, { message: 'Address is required.' }),
   type: z.enum(['Apartment', 'House', 'Villa', 'Plot']),
   bedrooms: z.coerce.number().int().min(0, { message: 'Bedrooms cannot be negative.' }),
@@ -27,6 +28,7 @@ const formSchema = z.object({
   amenities: z.string().min(1, {message: 'Please add at least one amenity'}).transform(val => val.split(',').map(s => s.trim())),
   lat: z.coerce.number(),
   lng: z.coerce.number(),
+  location: z.string().min(2, { message: 'Location is required.' }),
   landArea: z.string().optional(),
   totalUnits: z.coerce.number().optional(),
   towersAndBlocks: z.string().optional(),
@@ -72,6 +74,37 @@ export function PropertyForm({ property }: PropertyFormProps) {
       specifications: '',
     },
   });
+
+  const { ref: placesRef } = usePlacesWidget<HTMLInputElement>({
+    apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+    onPlaceSelected: (place) => {
+      if (!place) return;
+      
+      const lat = place.geometry?.location?.lat();
+      const lng = place.geometry?.location?.lng();
+      const address = place.formatted_address || '';
+      
+      let location = '';
+      const localityComponent = place.address_components?.find(c => c.types.includes('locality'));
+      const stateComponent = place.address_components?.find(c => c.types.includes('administrative_area_level_1'));
+
+      if (localityComponent && stateComponent) {
+        location = `${localityComponent.long_name}, ${stateComponent.short_name}`;
+      } else {
+        location = place.address_components?.[0]?.long_name || '';
+      }
+      
+      form.setValue('address', address);
+      form.setValue('location', location);
+      if(lat) form.setValue('lat', lat);
+      if(lng) form.setValue('lng', lng);
+    },
+    options: {
+      types: ["address"],
+      fields: ["address_components", "formatted_address", "geometry.location"],
+    }
+  });
+
 
   function onSubmit(values: PropertyFormValues) {
     console.log(values);
@@ -166,22 +199,16 @@ export function PropertyForm({ property }: PropertyFormProps) {
         <Card>
             <CardHeader>
                 <CardTitle>Location Details</CardTitle>
+                 <CardDescription>Search for an address and the fields below will be auto-filled.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                 <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Location</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Yelahanka, Bangalore" {...field} />
-                      </FormControl>
-                      <FormDescription>A short, user-friendly location name (e.g., for filtering).</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <FormItem>
+                  <FormLabel>Search Location</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Start typing an address..." ref={placesRef} />
+                  </FormControl>
+                </FormItem>
+
                 <FormField
                   control={form.control}
                   name="address"
@@ -189,12 +216,28 @@ export function PropertyForm({ property }: PropertyFormProps) {
                     <FormItem>
                       <FormLabel>Full Address</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Yelahanka, Bellary Road, Airport Road, Bangalore" {...field} />
+                        <Input readOnly placeholder="e.g., Yelahanka, Bellary Road, Airport Road, Bangalore" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                 <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Location</FormLabel>
+                      <FormControl>
+                        <Input readOnly placeholder="e.g., Yelahanka, Bangalore" {...field} />
+                      </FormControl>
+                      <FormDescription>A short, user-friendly location name (e.g., for filtering).</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+               
                  <div className="grid grid-cols-2 gap-6">
                     <FormField
                       control={form.control}
@@ -203,7 +246,7 @@ export function PropertyForm({ property }: PropertyFormProps) {
                         <FormItem>
                           <FormLabel>Latitude</FormLabel>
                           <FormControl>
-                            <Input type="number" {...field} />
+                            <Input readOnly type="number" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -216,7 +259,7 @@ export function PropertyForm({ property }: PropertyFormProps) {
                         <FormItem>
                           <FormLabel>Longitude</FormLabel>
                           <FormControl>
-                            <Input type="number" {...field} />
+                            <Input readOnly type="number" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -330,7 +373,7 @@ export function PropertyForm({ property }: PropertyFormProps) {
             <CardHeader>
                 <CardTitle>Marketing Content</CardTitle>
                 <CardDescription>Use HTML for formatting the description and specifications.</CardDescription>
-            </CardHeader>
+            </Header>
             <CardContent className="space-y-6">
                 <FormField
                   control={form.control}
