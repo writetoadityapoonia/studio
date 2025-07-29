@@ -3,7 +3,6 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Filter } from 'lucide-react';
@@ -11,9 +10,8 @@ import { Filter } from 'lucide-react';
 type PropertyFiltersProps = {
   filters: {
     location: string;
-    type: string;
   };
-  onFilterChange: (filters: { location: string; type: string }) => void;
+  onFilterChange: (filters: { location: string }) => void;
 };
 
 function FiltersContent({ filters, onFilterChange }: PropertyFiltersProps) {
@@ -27,23 +25,6 @@ function FiltersContent({ filters, onFilterChange }: PropertyFiltersProps) {
           value={filters.location}
           onChange={(e) => onFilterChange({ ...filters, location: e.target.value })}
         />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="type">Property Type</Label>
-        <Select
-          value={filters.type}
-          onValueChange={(value) => onFilterChange({ ...filters, type: value })}
-        >
-          <SelectTrigger id="type">
-            <SelectValue placeholder="All types" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="House">House</SelectItem>
-            <SelectItem value="Apartment">Apartment</SelectItem>
-            <SelectItem value="Villa">Villa</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
     </div>
   );

@@ -13,14 +13,12 @@ type PropertiesViewProps = {
 };
 
 export default function PropertiesView({ initialProperties }: PropertiesViewProps) {
-  const [filters, setFilters] = useState({ location: '', type: 'all' });
+  const [filters, setFilters] = useState({ location: '' });
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
 
   const filteredProperties = useMemo(() => {
     return initialProperties.filter((property) => {
-      const locationMatch = property.location.toLowerCase().includes(filters.location.toLowerCase());
-      const typeMatch = filters.type === 'all' || property.type === filters.type;
-      return locationMatch && typeMatch;
+      return property.location.toLowerCase().includes(filters.location.toLowerCase());
     });
   }, [initialProperties, filters]);
 

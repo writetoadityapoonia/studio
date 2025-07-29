@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Property } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -19,7 +18,7 @@ const formSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
   price: z.coerce.number().min(1, { message: 'Price must be a positive number.' }),
   address: z.string().min(10, { message: 'Address is required.' }),
-  type: z.enum(['Apartment', 'House', 'Villa', 'Plot']),
+  type: z.string().min(3, { message: 'Type must be at least 3 characters.' }),
   bedrooms: z.coerce.number().int().min(0, { message: 'Bedrooms cannot be negative.' }),
   bathrooms: z.coerce.number().int().min(0, { message: 'Bathrooms cannot be negative.' }),
   area: z.coerce.number().min(100, { message: 'Area must be at least 100 sqft.' }),
@@ -159,19 +158,9 @@ export function PropertyForm({ property }: PropertyFormProps) {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Property Type</FormLabel>
-                           <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a property type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="House">House</SelectItem>
-                              <SelectItem value="Apartment">Apartment</SelectItem>
-                              <SelectItem value="Villa">Villa</SelectItem>
-                              <SelectItem value="Plot">Plot</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <Input placeholder="e.g., Apartment, Villa, Plot" {...field} />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}

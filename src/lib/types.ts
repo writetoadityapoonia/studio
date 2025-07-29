@@ -4,7 +4,7 @@ export type Property = {
   price: number;
   location: string;
   address: string;
-  type: 'Apartment' | 'House' | 'Villa' | 'Plot';
+  type: string;
   bedrooms: number;
   bathrooms: number;
   area: number;
