@@ -15,7 +15,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
 
   return (
     <Card className="flex flex-col h-full overflow-hidden transition-transform duration-300 hover:scale-105 hover:shadow-primary/20 hover:shadow-lg">
-      <Link href={`/properties/${property.id}`} className="block">
+      <Link href={`/properties/${property.slug}`} className="block">
         <div className="relative h-56 w-full">
           <Image
             src={property.images[0]}
@@ -29,7 +29,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
         </div>
       </Link>
       <CardHeader>
-        <Link href={`/properties/${property.id}`} className="block">
+        <Link href={`/properties/${property.slug}`} className="block">
             <CardTitle className="font-headline text-xl leading-tight hover:text-primary transition-colors">
               {property.title}
             </CardTitle>
@@ -54,7 +54,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
           {property.price}
         </p>
         <Button asChild>
-          <Link href={`/properties/${property.id}`}>View Details</Link>
+          <Link href={`/properties/${property.slug}`}>View Details</Link>
         </Button>
       </CardFooter>
     </Card>

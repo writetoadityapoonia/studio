@@ -1,4 +1,4 @@
-import { getPropertyById } from '@/lib/data';
+import { getPropertyBySlug } from '@/lib/data';
 import { notFound } from 'next/navigation';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import Image from 'next/image';
@@ -11,12 +11,12 @@ import { Separator } from '@/components/ui/separator';
 
 type PropertyPageProps = {
   params: {
-    id: string;
+    id: string; // This is now the slug
   };
 };
 
 export default async function PropertyPage({ params }: PropertyPageProps) {
-  const property = await getPropertyById(params.id);
+  const property = await getPropertyBySlug(params.id);
 
   if (!property) {
     notFound();

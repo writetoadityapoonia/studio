@@ -9,6 +9,7 @@ const formSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
   price: z.string().min(1, { message: 'Price is required.' }),
+  priceValue: z.coerce.number().min(1, { message: 'Numeric price value is required.' }),
   address: z.string().min(10, { message: 'Address is required.' }),
   type: z.string().min(3, { message: 'Type must be at least 3 characters.' }),
   bedrooms: z.coerce.number().int().min(0, { message: 'Bedrooms cannot be negative.' }),
@@ -74,7 +75,9 @@ export async function saveProperty(
   
   if(id) {
     revalidatePath(`/admin/edit/${id}`);
-    revalidatePath(`/properties/${id}`);
+    const updatedProperty = validatedFields.data;
+    const slug = updatedProperty.title.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-').replace(/-+/g, '-');
+    revalidatePath(`/properties/${slug}`);
   }
 
   // Redirect after successful creation

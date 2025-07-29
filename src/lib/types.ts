@@ -1,7 +1,9 @@
 export type Property = {
   id: string;
+  slug: string; // New field for URL-friendly identifier
   title: string;
-  price: string;
+  price: string; // e.g. "₹2.04 Crore Onwards"
+  priceValue: number; // e.g. 20400000 - for filtering
   location: string;
   address: string;
   type: string;
@@ -13,10 +15,9 @@ export type Property = {
     lat: number;
     lng: number;
   };
-  // New project-specific fields
-  landArea?: string; // e.g., "3.17 Acres"
+  landArea?: string;
   totalUnits?: number;
-  towersAndBlocks?: string; // e.g., "4 Blocks, 2B + G + 14 Floors"
-  possessionTime?: string; // e.g., "2028 Onwards"
-  specifications?: string; // To hold specifications as HTML or Markdown
+  towersAndBlocks?: string;
+  possessionTime?: string;
+  specifications?: string;
 };

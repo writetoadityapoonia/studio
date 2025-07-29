@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { Property } from '@/lib/types';
 import { PropertyCard } from './property-card';
 import { PropertyFilters } from './property-filters';
@@ -10,15 +10,29 @@ const ITEMS_PER_PAGE = 6;
 
 type PropertiesViewProps = {
   initialProperties: Property[];
+  propertyTypes: string[];
+  priceRange: [number, number];
 };
 
-export default function PropertiesView({ initialProperties }: PropertiesViewProps) {
-  const [filters, setFilters] = useState({ location: '' });
+export default function PropertiesView({ initialProperties, propertyTypes, priceRange }: PropertiesViewProps) {
+  const [filters, setFilters] = useState({
+    location: '',
+    type: 'all',
+    price: priceRange[1],
+  });
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
+
+  useEffect(() => {
+    // Reset price filter when the available range changes
+    setFilters(f => ({ ...f, price: priceRange[1] }));
+  }, [priceRange]);
 
   const filteredProperties = useMemo(() => {
     return initialProperties.filter((property) => {
-      return property.location.toLowerCase().includes(filters.location.toLowerCase());
+      const locationMatch = property.location.toLowerCase().includes(filters.location.toLowerCase());
+      const typeMatch = filters.type === 'all' || property.type.toLowerCase() === filters.type.toLowerCase();
+      const priceMatch = property.priceValue <= filters.price;
+      return locationMatch && typeMatch && priceMatch;
     });
   }, [initialProperties, filters]);
 
@@ -32,7 +46,12 @@ export default function PropertiesView({ initialProperties }: PropertiesViewProp
   return (
     <div className="flex flex-col lg:flex-row gap-8">
       <aside className="w-full lg:w-1/4 xl:w-1/5">
-        <PropertyFilters filters={filters} onFilterChange={setFilters} />
+        <PropertyFilters
+          filters={filters}
+          onFilterChange={setFilters}
+          propertyTypes={propertyTypes}
+          priceRange={priceRange}
+        />
       </aside>
       <div className="w-full lg:w-3/4 xl:w-4/5">
         <div className="mb-8 flex items-center justify-between">

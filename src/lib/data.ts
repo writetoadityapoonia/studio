@@ -1,12 +1,25 @@
 import type { Property } from './types';
 import { revalidatePath } from 'next/cache';
 
+const createSlug = (title: string) => {
+  return title
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9\s-]/g, '') 
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+};
+
+
 // In-memory store with some initial data.
 let properties: Property[] = [
   {
     id: '1',
+    slug: 'concorde-mayfair',
     title: 'Concorde Mayfair',
     price: '₹2.04 Crore Onwards',
+    priceValue: 20400000,
     location: 'Yelahanka, Bangalore',
     address: 'Sy.No.82, Allalasandra Village, Yelahanka Hobli, Bangalore North Taluk, Bangalore - 560065',
     type: 'Apartment',
@@ -44,8 +57,10 @@ let properties: Property[] = [
   },
   {
     id: '2',
+    slug: 'prestige-lakeside-habitat',
     title: 'Prestige Lakeside Habitat',
     price: '₹2.5 Crore Onwards',
+    priceValue: 25000000,
     location: 'Whitefield, Bangalore',
     address: 'Whitefield-Sarjapur Road, Varthur, Bangalore',
     type: 'Villa',
@@ -71,8 +86,10 @@ let properties: Property[] = [
   },
   {
     id: '3',
+    slug: 'sobha-dream-acres',
     title: 'Sobha Dream Acres',
     price: '₹80 Lakhs Onwards',
+    priceValue: 8000000,
     location: 'Panathur, Bangalore',
     address: 'Balagere Panathur Road, Bangalore',
     type: 'Apartment',
@@ -113,15 +130,16 @@ export async function getProperties(options?: { location?: string; type?: string
   return filteredProperties;
 }
 
-export async function getPropertyById(id: string): Promise<Property | undefined> {
+export async function getPropertyBySlug(slug: string): Promise<Property | undefined> {
   await new Promise(resolve => setTimeout(resolve, 100)); // Simulate network delay
-  return properties.find(p => p.id === id);
+  return properties.find(p => p.slug === slug);
 }
 
-export async function createProperty(data: Omit<Property, 'id'>): Promise<Property> {
+export async function createProperty(data: Omit<Property, 'id' | 'slug'>): Promise<Property> {
     await new Promise(resolve => setTimeout(resolve, 500));
     const newProperty: Property = {
         id: String(nextId++),
+        slug: createSlug(data.title),
         ...data
     };
     properties.unshift(newProperty); // Add to the beginning of the array
@@ -136,14 +154,36 @@ export async function updateProperty(id: string, data: Partial<Omit<Property, 'i
     if (propertyIndex === -1) {
         return null;
     }
+    
+    const slug = data.title ? createSlug(data.title) : properties[propertyIndex].slug;
+
     const updatedProperty = {
         ...properties[propertyIndex],
         ...data,
+        slug,
     };
     properties[propertyIndex] = updatedProperty;
     revalidatePath('/admin');
     revalidatePath(`/admin/edit/${id}`);
-    revalidatePath(`/properties/${id}`);
+    revalidatePath(`/properties/${slug}`);
     revalidatePath('/');
     return updatedProperty;
+}
+
+export async function getPropertyById(id: string): Promise<Property | undefined> {
+  await new Promise(resolve => setTimeout(resolve, 100)); // Simulate network delay
+  return properties.find(p => p.id === id);
+}
+
+export async function getUniquePropertyTypes(): Promise<string[]> {
+  await new Promise(resolve => setTimeout(resolve, 100));
+  const types = new Set(properties.map(p => p.type));
+  return Array.from(types);
+}
+
+export async function getPriceRange(): Promise<[number, number]> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    if (properties.length === 0) return [0, 100000000];
+    const prices = properties.map(p => p.priceValue);
+    return [Math.min(...prices), Math.max(...prices)];
 }

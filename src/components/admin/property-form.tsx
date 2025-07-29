@@ -19,6 +19,7 @@ import { saveProperty, FormState } from '@/lib/actions';
 const formSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
   price: z.string().min(1, { message: 'Price is required.' }),
+  priceValue: z.coerce.number().min(1, { message: 'Numeric price value is required.' }),
   address: z.string().min(10, { message: 'Address is required.' }),
   type: z.string().min(3, { message: 'Type must be at least 3 characters.' }),
   bedrooms: z.coerce.number().int().min(0, { message: 'Bedrooms cannot be negative.' }),
@@ -69,6 +70,7 @@ export function PropertyForm({ property }: PropertyFormProps) {
     } : {
       title: '',
       price: '',
+      priceValue: 0,
       location: '',
       address: '',
       type: 'Apartment',
@@ -84,10 +86,9 @@ export function PropertyForm({ property }: PropertyFormProps) {
       possessionTime: '',
       specifications: '',
     },
-     // Set mode to 'all' to trigger validation on blur, change, etc.
     mode: 'all',
   });
-
+  
   useEffect(() => {
     if (state.message) {
       toast({
@@ -107,7 +108,6 @@ export function PropertyForm({ property }: PropertyFormProps) {
         });
     }
   }, [state, toast, form]);
-
 
   const { ref: placesRef } = usePlacesWidget<HTMLInputElement>({
     apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
@@ -141,17 +141,13 @@ export function PropertyForm({ property }: PropertyFormProps) {
   });
 
 
-  // We need to wrap the server action call in a function
-  const handleFormSubmit = form.handleSubmit((data) => {
-      // Create a new FormData object
+  const handleFormSubmit = (data: PropertyFormValues) => {
       const formData = new FormData();
       
-      // Append all form data to it
       if (property) {
         formData.append('id', property.id);
       }
       Object.entries(data).forEach(([key, value]) => {
-          // Handle arrays by joining them into a comma-separated string
           if (Array.isArray(value)) {
               formData.append(key, value.join(', '));
           } else if (value !== undefined && value !== null) {
@@ -159,13 +155,12 @@ export function PropertyForm({ property }: PropertyFormProps) {
           }
       });
       
-      // Dispatch the action with the form data
       dispatch(formData);
-  });
+  };
 
   return (
     <Form {...form}>
-      <form action={dispatch} className="space-y-8">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
         {property?.id && <input type="hidden" name="id" value={property.id} />}
         <Card>
             <CardHeader>
@@ -192,10 +187,25 @@ export function PropertyForm({ property }: PropertyFormProps) {
                       name="price"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Starting Price (Text)</FormLabel>
+                          <FormLabel>Price (Text)</FormLabel>
                           <FormControl>
                             <Input placeholder="e.g., ₹2.04 Crore Onwards" {...field} />
                           </FormControl>
+                           <FormDescription>The user-facing price text.</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="priceValue"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Price (Numeric)</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="e.g., 20400000" {...field} />
+                          </FormControl>
+                          <FormDescription>For filtering. 1 Crore = 10000000.</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -310,7 +320,7 @@ export function PropertyForm({ property }: PropertyFormProps) {
             <CardHeader>
                 <CardTitle>Project/Unit Details</CardTitle>
                 <CardDescription>All fields in this section are optional.</CardDescription>
-            </CardHeader>
+            </Header>
              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
@@ -385,7 +395,7 @@ export function PropertyForm({ property }: PropertyFormProps) {
             <CardHeader>
                 <CardTitle>Marketing Content</CardTitle>
                 <CardDescription>Use HTML for formatting the description and specifications.</CardDescription>
-            </CardHeader>
+            </Header>
             <CardContent className="space-y-6">
                 <FormField
                   control={form.control}
