@@ -373,7 +373,7 @@ export function PropertyForm({ property }: PropertyFormProps) {
             <CardHeader>
                 <CardTitle>Marketing Content</CardTitle>
                 <CardDescription>Use HTML for formatting the description and specifications.</CardDescription>
-            </Header>
+            </CardHeader>
             <CardContent className="space-y-6">
                 <FormField
                   control={form.control}
