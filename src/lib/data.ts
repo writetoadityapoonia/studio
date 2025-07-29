@@ -19,6 +19,11 @@ const properties: Property[] = [
     `,
     amenities: ['Rooftop Terrace', 'Fitness Center', '24/7 Security', 'Concierge'],
     coordinates: { lat: 40.7128, lng: -74.006 },
+    landArea: "1 Acre",
+    totalUnits: 50,
+    towersAndBlocks: "1 Block, G + 10 Floors",
+    possessionTime: "Ready to move",
+    specifications: `<h4>Structure</h4><ul><li>RCC framed structure</li></ul><h4>Flooring</h4><ul><li>Premium Vitrified Flooring</li></ul>`
   },
   {
     id: '2',
@@ -38,6 +43,11 @@ const properties: Property[] = [
     `,
     amenities: ['Large Backyard', 'Swimming Pool', '2-Car Garage', 'Fireplace'],
     coordinates: { lat: 30.2672, lng: -97.7431 },
+    landArea: "0.5 Acres",
+    totalUnits: 1,
+    towersAndBlocks: "1 Block, G + 1 Floor",
+    possessionTime: "Ready to move",
+    specifications: `<h4>Structure</h4><ul><li>RCC framed structure</li></ul>`
   },
   {
     id: '3',
@@ -57,6 +67,9 @@ const properties: Property[] = [
     `,
     amenities: ['Infinity Pool', 'Private Beach Access', 'Home Theater', 'Ocean View'],
     coordinates: { lat: 34.0259, lng: -118.7798 },
+    landArea: "2 Acres",
+    totalUnits: 1,
+    possessionTime: "Ready to move"
   },
   {
     id: '4',
@@ -76,6 +89,9 @@ const properties: Property[] = [
     `,
     amenities: ['Modern Kitchen', 'Hardwood Floors', 'High Ceilings', 'City View'],
     coordinates: { lat: 37.7749, lng: -122.4194 },
+    landArea: "0.5 Acres",
+    totalUnits: 20,
+    possessionTime: "Ready to move"
   },
   {
     id: '5',
@@ -95,6 +111,9 @@ const properties: Property[] = [
     `,
     amenities: ['Mountain View', 'Large Deck', 'Stone Fireplace', 'Hiking Trails Access'],
     coordinates: { lat: 39.7392, lng: -104.9903 },
+    landArea: "5 Acres",
+    totalUnits: 1,
+    possessionTime: "Ready to move"
   },
   {
     id: '6',
@@ -114,6 +133,9 @@ const properties: Property[] = [
     `,
     amenities: ['Private Dock', 'Swimming Pool', 'Chef\'s Kitchen', 'Marble Floors'],
     coordinates: { lat: 25.7907, lng: -80.13 },
+    landArea: "1.5 Acres",
+    totalUnits: 1,
+    possessionTime: "Ready to move"
   },
 ];
 

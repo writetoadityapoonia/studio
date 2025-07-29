@@ -4,7 +4,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BedDouble, Bath, AreaChart, MapPin, CheckCircle } from 'lucide-react';
+import { BedDouble, Bath, AreaChart, MapPin, CheckCircle, Building, Users, Clock, LandPlot } from 'lucide-react';
 import { MapDisplay } from '@/components/property/map-display';
 import { EnquiryForm } from '@/components/property/enquiry-form';
 import { Separator } from '@/components/ui/separator';
@@ -53,7 +53,7 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
                 </div>
                 <Badge variant="secondary" className="text-lg">{property.type}</Badge>
             </div>
-            <p className="text-4xl font-bold text-primary mt-4">${property.price.toLocaleString()}</p>
+            <p className="text-4xl font-bold text-primary mt-4">Starts from ${property.price.toLocaleString()}</p>
           </div>
 
           <Separator className="my-8" />
@@ -61,24 +61,28 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
           {/* Key Details Card */}
           <Card className="mb-8">
             <CardHeader>
-              <CardTitle className="font-headline">Key Details</CardTitle>
+              <CardTitle className="font-headline">Project Overview</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
               <div className="p-4 bg-secondary rounded-lg">
                 <BedDouble className="w-8 h-8 mx-auto mb-2 text-primary" />
                 <p className="font-semibold">{property.bedrooms} Bedrooms</p>
+                <p className="text-xs text-muted-foreground">Starting from</p>
               </div>
               <div className="p-4 bg-secondary rounded-lg">
-                <Bath className="w-8 h-8 mx-auto mb-2 text-primary" />
-                <p className="font-semibold">{property.bathrooms} Bathrooms</p>
+                <LandPlot className="w-8 h-8 mx-auto mb-2 text-primary" />
+                <p className="font-semibold">{property.landArea}</p>
+                 <p className="text-xs text-muted-foreground">Land Area</p>
               </div>
               <div className="p-4 bg-secondary rounded-lg">
-                <AreaChart className="w-8 h-8 mx-auto mb-2 text-primary" />
-                <p className="font-semibold">{property.area} sqft</p>
+                <Building className="w-8 h-8 mx-auto mb-2 text-primary" />
+                <p className="font-semibold">{property.totalUnits} Units</p>
+                 <p className="text-xs text-muted-foreground">Total</p>
               </div>
               <div className="p-4 bg-secondary rounded-lg">
-                <CheckCircle className="w-8 h-8 mx-auto mb-2 text-primary" />
-                <p className="font-semibold">{property.type}</p>
+                <Clock className="w-8 h-8 mx-auto mb-2 text-primary" />
+                <p className="font-semibold">{property.possessionTime}</p>
+                 <p className="text-xs text-muted-foreground">Possession</p>
               </div>
             </CardContent>
           </Card>
@@ -107,6 +111,20 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
               ))}
             </div>
           </div>
+
+          {/* Specifications */}
+          {property.specifications && (
+            <div className="mb-8">
+               <h2 className="text-2xl font-headline font-semibold mb-4">Specifications</h2>
+               <div className="prose prose-invert max-w-none text-muted-foreground">
+                  <iframe
+                      srcDoc={`<style>body{color:hsl(var(--muted-foreground)); font-family: Inter, sans-serif;} h4 {font-weight: bold; margin-top: 1rem; margin-bottom: 0.5rem; } ul { list-style-position: inside; padding-left: 0; }</style>${property.specifications}`}
+                      className="w-full h-96 border-0"
+                      sandbox=""
+                  />
+               </div>
+            </div>
+          )}
         </div>
         
         {/* Sidebar */}

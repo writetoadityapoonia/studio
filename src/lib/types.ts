@@ -4,7 +4,7 @@ export type Property = {
   price: number;
   location: string;
   address: string;
-  type: 'Apartment' | 'House' | 'Villa';
+  type: 'Apartment' | 'House' | 'Villa' | 'Plot';
   bedrooms: number;
   bathrooms: number;
   area: number;
@@ -15,4 +15,10 @@ export type Property = {
     lat: number;
     lng: number;
   };
+  // New project-specific fields
+  landArea?: string; // e.g., "3.17 Acres"
+  totalUnits?: number;
+  towersAndBlocks?: string; // e.g., "4 Blocks, 2B + G + 14 Floors"
+  possessionTime?: string; // e.g., "2028 Onwards"
+  specifications?: string; // To hold specifications as HTML or Markdown
 };
