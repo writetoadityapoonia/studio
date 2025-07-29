@@ -57,3 +57,32 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom styles for Google Maps Autocomplete */
+.pac-container {
+  @apply rounded-md border-border bg-popover text-popover-foreground shadow-md;
+  z-index: 1000 !important; /* Ensure it appears above other elements */
+}
+
+.pac-item {
+  @apply cursor-pointer px-4 py-2 text-sm text-popover-foreground;
+}
+
+.pac-item:hover {
+  @apply bg-accent text-accent-foreground;
+}
+
+.pac-item-query {
+  @apply font-bold;
+}
+
+.pac-icon {
+  @apply mr-2;
+  /* The icon is an inline SVG, so we can't easily change its color with a filter in all browsers */
+}
+
+.pac-logo:after {
+  @apply bg-popover p-2;
+}
+
+    
