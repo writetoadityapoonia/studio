@@ -96,6 +96,13 @@ export function PropertyForm({ property }: PropertyFormProps) {
     options: {
       types: ["address"],
       fields: ["address_components", "formatted_address", "geometry.location"],
+      componentRestrictions: { country: "in" },
+      locationBias: {
+          north: 18.5,
+          south: 11.5,
+          west: 74.0,
+          east: 78.5
+      }
     }
   });
 
