@@ -9,22 +9,22 @@ if (!admin.apps.length) {
       !process.env.FIREBASE_CLIENT_EMAIL ||
       !process.env.FIREBASE_PRIVATE_KEY
     ) {
-      throw new Error('Firebase environment variables are not set.');
+      throw new Error('Firebase environment variables are not set. Please check your .env file.');
     }
     
     admin.initializeApp({
       credential: admin.credential.cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        // Replace escaped newlines from environment variables
-        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        // The private key must be formatted correctly in the .env file.
+        privateKey: process.env.FIREBASE_PRIVATE_KEY,
       }),
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Firebase admin initialization error:', error);
     // Throwing the error here will prevent the app from starting
     // without a proper Firebase connection, which is safer.
-    throw new Error('Failed to initialize Firebase Admin SDK. Please check your service account credentials.');
+    throw new Error(`Failed to initialize Firebase Admin SDK. Please check your service account credentials and the server logs for more details. Original error: ${error.message}`);
   }
 }
 

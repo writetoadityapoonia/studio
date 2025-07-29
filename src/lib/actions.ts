@@ -120,6 +120,7 @@ export async function submitEnquiry(
     
     try {
         await createEnquiry(validatedFields.data);
+        revalidatePath('/admin');
         return { message: 'Enquiry submitted successfully!' };
     } catch (e) {
         return { message: 'Database Error: Failed to submit enquiry.' };
