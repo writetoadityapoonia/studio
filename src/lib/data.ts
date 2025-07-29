@@ -112,9 +112,28 @@ let properties: Property[] = [
   }
 ];
 
-let enquiries: Enquiry[] = [];
+let enquiries: Enquiry[] = [
+    { 
+        id: '1', 
+        name: 'Alice Johnson', 
+        email: 'alice@example.com', 
+        message: 'Interested in the 3BHK unit, could you share the floor plan?', 
+        propertyId: '1', 
+        propertyTitle: 'Concorde Mayfair', 
+        createdAt: new Date('2024-05-22T10:30:00Z') 
+    },
+    { 
+        id: '2', 
+        name: 'Bob Williams', 
+        email: 'bob@example.com', 
+        message: 'What is the current availability for villas in Prestige Lakeside Habitat?', 
+        propertyId: '2', 
+        propertyTitle: 'Prestige Lakeside Habitat', 
+        createdAt: new Date('2024-05-21T15:00:00Z') 
+    },
+];
 let nextPropertyId = 4;
-let nextEnquiryId = 1;
+let nextEnquiryId = 3;
 
 
 // Properties
