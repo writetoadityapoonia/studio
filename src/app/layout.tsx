@@ -9,7 +9,7 @@ import { Suspense } from 'react';
 export const metadata: Metadata = {
   title: 'Frnz Estates',
   description: 'Find your next dream home with Frnz Estates.',
-  icons: null,
+  icons: {},
 };
 
 export default function RootLayout({
