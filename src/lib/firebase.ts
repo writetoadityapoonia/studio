@@ -1,27 +1,25 @@
+
 import admin from 'firebase-admin';
 
-// Ensure the app is only initialized once
+// To prevent initialization errors in different environments,
+// we check if the app is already initialized.
 if (!admin.apps.length) {
   try {
-    // Check if the required environment variables are set
-    if (
-      !process.env.FIREBASE_PROJECT_ID ||
-      !process.env.FIREBASE_CLIENT_EMAIL ||
-      !process.env.FIREBASE_PRIVATE_KEY
-    ) {
-      throw new Error('Firebase environment variables are not set. Please check your .env file.');
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+    if (!privateKey) {
+      throw new Error('The FIREBASE_PRIVATE_KEY environment variable is not set.');
     }
-    
+
     admin.initializeApp({
       credential: admin.credential.cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        // The private key must be formatted with escaped newlines in the .env file.
-        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        // The private key must have its newline characters correctly escaped.
+        // The replace call below ensures that the string is parsed correctly.
+        privateKey: privateKey.replace(/\\n/g, '\n'),
       }),
     });
   } catch (error: any) {
-    console.error('Firebase admin initialization error:', error);
     // Throwing the error here will prevent the app from starting
     // without a proper Firebase connection, which is safer.
     throw new Error(`Failed to initialize Firebase Admin SDK. Please check your service account credentials and the server logs for more details. Original error: ${error.message}`);
