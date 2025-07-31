@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { createProperty, updateProperty } from '@/lib/actions';
 import { getPropertyById } from '@/lib/data';
 import type { Property } from '@/lib/types';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { Toolbox, BuilderComponent, componentToHtml, generateInitialComponents } from '@/components/builder-elements';
 
 
@@ -151,8 +151,10 @@ const PropertiesPanel = ({ selectedComponent, onUpdate }: { selectedComponent: B
   );
 };
 
-export default function PropertyEditPage({ params: { id } }: { params: { id: string } }) {
+export default function PropertyEditPage() {
   const router = useRouter();
+  const params = useParams();
+  const id = params.id as string;
   const { toast } = useToast();
   const isNew = id === 'new';
   
@@ -172,7 +174,7 @@ export default function PropertyEditPage({ params: { id } }: { params: { id: str
   const [loading, setLoading] = useState(!isNew);
 
   useEffect(() => {
-    if (!isNew) {
+    if (!isNew && id) {
       const existingProperty = getPropertyById(id);
       if (existingProperty) {
         setProperty(existingProperty);
@@ -265,7 +267,7 @@ export default function PropertyEditPage({ params: { id } }: { params: { id: str
 
   const activeComponentType = activeId && activeId.startsWith('toolbox-') ? activeId.split('-')[1] as BuilderComponent['type'] : null;
   
-  if (loading) {
+  if (loading && !isNew) {
       return <div className="flex h-screen items-center justify-center">Loading...</div>
   }
 
