@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -19,6 +20,9 @@ import type { Property } from '@/lib/types';
 import { useRouter, useParams } from 'next/navigation';
 import { Toolbox, BuilderComponent, componentToHtml, generateInitialComponents, TextSize } from '@/components/builder-elements';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { deleteProperty } from '@/lib/actions';
+import { ClientOnly } from '@/components/client-only';
 
 function SortableItem({ id, children }: { id: string; children: React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
@@ -100,7 +104,7 @@ const Canvas = ({ components, setComponents, selectedComponentId, setSelectedCom
 
   return (
     <SortableContext items={components.map(c => c.id)}>
-      <div ref={setNodeRef} className={cn("w-full h-full bg-muted/30 rounded-lg p-8 space-y-2 overflow-y-auto", {"bg-primary/10": isOver})}>
+      <div ref={setNodeRef} id="canvas" className={cn("w-full h-full bg-muted/30 rounded-lg p-8 space-y-2 overflow-y-auto", {"bg-primary/10": isOver})}>
         {components.length > 0 ? (
           components.map(component => (
             <SortableItem key={component.id} id={component.id}>
@@ -294,19 +298,16 @@ export default function PropertyEditPage() {
                 return;
         }
 
-        const overIndex = components.findIndex(c => c.id === over.id);
+        const overIndex = over.id === 'canvas' ? components.length : components.findIndex(c => c.id === over.id);
 
-        if (over.id === 'canvas') {
-           setComponents(prev => [...prev, newComponent]);
-        } else if (overIndex !== -1) {
-            const isBelow = event.delta.y > 0;
-            const insertIndex = isBelow ? overIndex + 1 : overIndex;
-            setComponents(prev => {
-                const newItems = [...prev];
-                newItems.splice(insertIndex, 0, newComponent);
-                return newItems;
-            });
+        if (overIndex !== -1) {
+             const newItems = [...components];
+             newItems.splice(overIndex, 0, newComponent);
+             setComponents(newItems);
+        } else {
+             setComponents(prev => [...prev, newComponent]);
         }
+        
         setSelectedComponentId(newComponent.id);
         return;
     }
@@ -351,7 +352,7 @@ export default function PropertyEditPage() {
 
       setProperty(prev => ({ 
           ...prev, 
-          [name]: isNumericField ? (value === '' ? '' : parseFloat(value)) : value 
+          [name]: isNumericField ? (value === '' ? 0 : parseFloat(value)) : value 
       }));
   };
 
@@ -362,83 +363,85 @@ export default function PropertyEditPage() {
   }
 
   return (
-    <DndContext onDragEnd={handleDragEnd} onDragStart={e => setActiveId(e.active.id.toString())} sensors={sensors}>
-      <div className="flex flex-col h-screen bg-background text-foreground">
-        <header className="flex items-center justify-between p-4 border-b">
-            <h1 className="text-2xl font-bold font-headline">{isNew ? 'Create New Property' : `Editing: ${property.title}`}</h1>
-            <Button onClick={handleSave}>
-                <Save className="mr-2" />
-                {isNew ? 'Save Property' : 'Update Property'}
-            </Button>
-        </header>
+    <ClientOnly>
+      <DndContext onDragEnd={handleDragEnd} onDragStart={e => setActiveId(e.active.id.toString())} sensors={sensors}>
+        <div className="flex flex-col h-screen bg-background text-foreground">
+          <header className="flex items-center justify-between p-4 border-b">
+              <h1 className="text-2xl font-bold font-headline">{isNew ? 'Create New Property' : `Editing: ${property.title}`}</h1>
+              <Button onClick={handleSave}>
+                  <Save className="mr-2" />
+                  {isNew ? 'Save Property' : 'Update Property'}
+              </Button>
+          </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] flex-grow overflow-hidden">
-            {/* Main Edit Area */}
-            <div className="flex flex-col overflow-y-auto">
-                {/* Property Details Form */}
-                <div className="p-6 border-b">
-                   <Card>
-                       <CardHeader><CardTitle>Property Details</CardTitle></CardHeader>
-                       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <Label htmlFor="title">Title</Label>
-                                <Input id="title" name="title" value={property.title} onChange={handleInputChange} />
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="location">Location</Label>
-                                <Input id="location" name="location" value={property.location} onChange={handleInputChange} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="price">Price (per month)</Label>
-                                <Input id="price" name="price" type="number" value={property.price || ''} onChange={handleInputChange} />
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="type">Type</Label>
-                                <Input id="type" name="type" value={property.type} onChange={handleInputChange} />
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="bedrooms">Bedrooms</Label>
-                                <Input id="bedrooms" name="bedrooms" type="number" value={property.bedrooms || ''} onChange={handleInputChange} />
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="bathrooms">Bathrooms</Label>
-                                <Input id="bathrooms" name="bathrooms" type="number" value={property.bathrooms || ''} onChange={handleInputChange} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="area">Area (sqft)</Label>
-                                <Input id="area" name="area" type="number" value={property.area || ''} onChange={handleInputChange} />
-                            </div>
-                       </CardContent>
-                   </Card>
-                </div>
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] flex-grow overflow-hidden">
+              {/* Main Edit Area */}
+              <div className="flex flex-col overflow-y-auto">
+                  {/* Property Details Form */}
+                  <div className="p-6 border-b">
+                     <Card>
+                         <CardHeader><CardTitle>Property Details</CardTitle></CardHeader>
+                         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="space-y-2">
+                                  <Label htmlFor="title">Title</Label>
+                                  <Input id="title" name="title" value={property.title} onChange={handleInputChange} />
+                              </div>
+                               <div className="space-y-2">
+                                  <Label htmlFor="location">Location</Label>
+                                  <Input id="location" name="location" value={property.location} onChange={handleInputChange} />
+                              </div>
+                              <div className="space-y-2">
+                                  <Label htmlFor="price">Price (per month)</Label>
+                                  <Input id="price" name="price" type="number" value={property.price || 0} onChange={handleInputChange} />
+                              </div>
+                               <div className="space-y-2">
+                                  <Label htmlFor="type">Type</Label>
+                                  <Input id="type" name="type" value={property.type} onChange={handleInputChange} />
+                              </div>
+                               <div className="space-y-2">
+                                  <Label htmlFor="bedrooms">Bedrooms</Label>
+                                  <Input id="bedrooms" name="bedrooms" type="number" value={property.bedrooms || 0} onChange={handleInputChange} />
+                              </div>
+                               <div className="space-y-2">
+                                  <Label htmlFor="bathrooms">Bathrooms</Label>
+                                  <Input id="bathrooms" name="bathrooms" type="number" value={property.bathrooms || 0} onChange={handleInputChange} />
+                              </div>
+                              <div className="space-y-2">
+                                  <Label htmlFor="area">Area (sqft)</Label>
+                                  <Input id="area" name="area" type="number" value={property.area || 0} onChange={handleInputChange} />
+                              </div>
+                         </CardContent>
+                     </Card>
+                  </div>
 
-                {/* Description Builder */}
-                 <div className="p-6 flex-grow flex flex-col">
-                    <h2 className="text-xl font-bold mb-4">Property Description Builder</h2>
-                    <div className="grid grid-cols-[250px_1fr] flex-grow gap-6 h-full min-h-[500px]">
-                        <Toolbox />
-                        <Canvas components={components} setComponents={setComponents} selectedComponentId={selectedComponentId} setSelectedComponentId={setSelectedComponentId} />
-                    </div>
-                </div>
-            </div>
+                  {/* Description Builder */}
+                   <div className="p-6 flex-grow flex flex-col">
+                      <h2 className="text-xl font-bold mb-4">Property Description Builder</h2>
+                      <div className="grid grid-cols-[250px_1fr] flex-grow gap-6 h-full min-h-[500px]">
+                          <Toolbox />
+                          <Canvas components={components} setComponents={setComponents} selectedComponentId={selectedComponentId} setSelectedComponentId={setSelectedComponentId} />
+                      </div>
+                  </div>
+              </div>
 
-            {/* Properties Panel */}
-            <div className="p-4 border-l h-full overflow-y-auto">
-                <PropertiesPanel selectedComponent={selectedComponent} onUpdate={handleUpdateComponent} />
-            </div>
+              {/* Properties Panel */}
+              <div className="p-4 border-l h-full overflow-y-auto">
+                  <PropertiesPanel selectedComponent={selectedComponent} onUpdate={handleUpdateComponent} />
+              </div>
+          </div>
         </div>
-      </div>
 
-      <DragOverlay>
-        {activeComponentType ? (
-          <div className="flex items-center gap-4 p-2 bg-primary text-primary-foreground rounded-lg border cursor-grabbing shadow-lg">
-             {activeComponentType === 'Text' && <Type className="w-6 h-6" />}
-             {activeComponentType === 'Button' && <RectangleHorizontal className="w-6 h-6" />}
-             {activeComponentType === 'Table' && <TableIcon className="w-6 h-6" />}
-             <span className="font-medium">{activeComponentType}</span>
-           </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+        <DragOverlay>
+          {activeComponentType ? (
+            <div className="flex items-center gap-4 p-2 bg-primary text-primary-foreground rounded-lg border cursor-grabbing shadow-lg">
+               {activeComponentType === 'Text' && <Type className="w-6 h-6" />}
+               {activeComponentType === 'Button' && <RectangleHorizontal className="w-6 h-6" />}
+               {activeComponentType === 'Table' && <TableIcon className="w-6 h-6" />}
+               <span className="font-medium">{activeComponentType}</span>
+             </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+    </ClientOnly>
   );
 }
