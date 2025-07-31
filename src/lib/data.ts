@@ -1,3 +1,5 @@
+'use server';
+
 import { connectToDatabase } from './mongodb';
 import type { Property } from './types';
 import { ObjectId } from 'mongodb';
