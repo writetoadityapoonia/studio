@@ -41,13 +41,13 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
             <span>{property.location}</span>
           </div>
 
-          <div className="prose prose-invert max-w-none">
+          <div className="prose prose-invert max-w-none bg-background p-4 rounded-lg">
             {/* The iframe will securely render the HTML from the page builder */}
             <iframe
               srcDoc={property.description}
-              className="w-full h-96 border rounded-lg bg-background"
+              className="w-full h-[400px] border-0"
               title="Property Description"
-              sandbox="allow-same-origin" // Allows scripts from the same origin, can be restricted further
+              sandbox="allow-scripts" // Keep it secure
             />
           </div>
         </div>

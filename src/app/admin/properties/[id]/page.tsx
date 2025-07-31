@@ -1,0 +1,349 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { DndContext, DragEndEvent, DragOverlay } from '@dnd-kit/core';
+import { SortableContext, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { v4 as uuidv4 } from 'uuid';
+import { Plus, Trash2, Type, RectangleHorizontal, Save, GripVertical } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import { createProperty, updateProperty } from '@/lib/actions';
+import { getPropertyById } from '@/lib/data';
+import type { Property } from '@/lib/types';
+import { useRouter } from 'next/navigation';
+import { Toolbox, BuilderComponent, componentToHtml, generateInitialComponents } from '@/components/builder-elements';
+
+
+function SortableItem({ id, children }: { id: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} className="relative group">
+       <div {...listeners} className="absolute -left-8 top-1/2 -translate-y-1/2 p-2 cursor-grab opacity-30 hover:opacity-100">
+           <GripVertical className="w-5 h-5" />
+       </div>
+      {children}
+    </div>
+  );
+}
+
+const CanvasComponent = ({ component, selected, onSelect, onDelete }: { component: BuilderComponent; selected: boolean; onSelect: () => void; onDelete: () => void; }) => {
+  const renderComponent = () => {
+    switch (component.type) {
+      case 'Text':
+        return <p className="text-lg">{component.text}</p>;
+      case 'Button':
+        return <Button>{component.text}</Button>;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div
+      onClick={onSelect}
+      className={cn(
+        'p-4 my-2 border-2 border-dashed border-transparent transition-all rounded-lg cursor-pointer bg-background',
+        { 'border-primary bg-primary/10': selected }
+      )}
+    >
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+                <Trash2 className="w-4 h-4 text-destructive" />
+            </Button>
+        </div>
+      {renderComponent()}
+    </div>
+  );
+};
+
+const Canvas = ({ components, setComponents, selectedComponentId, setSelectedComponentId }: 
+  { components: BuilderComponent[], setComponents: React.Dispatch<React.SetStateAction<BuilderComponent[]>>, selectedComponentId: string | null, setSelectedComponentId: (id: string | null) => void }
+) => {
+
+  return (
+    <SortableContext items={components.map(c => c.id)}>
+      <div className="w-full h-full bg-muted/30 rounded-lg p-8 space-y-2 overflow-y-auto">
+        {components.length > 0 ? (
+          components.map(component => (
+            <SortableItem key={component.id} id={component.id}>
+              <CanvasComponent
+                component={component}
+                selected={selectedComponentId === component.id}
+                onSelect={() => setSelectedComponentId(component.id)}
+                onDelete={() => {
+                  setComponents(prev => prev.filter(c => c.id !== component.id));
+                  if (selectedComponentId === component.id) {
+                    setSelectedComponentId(null);
+                  }
+                }}
+              />
+            </SortableItem>
+          ))
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+            <Plus className="w-12 h-12 mb-4" />
+            <p>Drag elements from the toolbox here to build the property description.</p>
+          </div>
+        )}
+      </div>
+    </SortableContext>
+  );
+};
+
+const PropertiesPanel = ({ selectedComponent, onUpdate }: { selectedComponent: BuilderComponent | null; onUpdate: (id: string, newProps: Partial<BuilderComponent>) => void }) => {
+  if (!selectedComponent) {
+    return (
+      <Card className="w-full h-full">
+        <CardHeader>
+          <CardTitle>Properties</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">Select a component to see its properties.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const renderProperties = () => {
+    switch (selectedComponent.type) {
+      case 'Text':
+      case 'Button':
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="text">Text Content</Label>
+              <Textarea
+                id="text"
+                value={selectedComponent.text}
+                onChange={(e) => onUpdate(selectedComponent.id, { text: e.target.value })}
+                className="min-h-[100px]"
+              />
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <Card className="w-full h-full">
+      <CardHeader>
+        <CardTitle>{selectedComponent.type} Properties</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {renderProperties()}
+      </CardContent>
+    </Card>
+  );
+};
+
+export default function PropertyEditPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const isNew = params.id === 'new';
+  
+  const [property, setProperty] = useState<Partial<Property>>({
+      title: '',
+      location: '',
+      price: 0,
+      type: 'Apartment',
+      bedrooms: 1,
+      bathrooms: 1,
+      area: 0,
+      images: ['https://placehold.co/600x400.png']
+  });
+  const [components, setComponents] = useState<BuilderComponent[]>([]);
+  const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(!isNew);
+
+  useEffect(() => {
+    if (!isNew) {
+      const existingProperty = getPropertyById(params.id);
+      if (existingProperty) {
+        setProperty(existingProperty);
+        setComponents(generateInitialComponents(existingProperty.description));
+      } else {
+        toast({ title: "Property not found", variant: "destructive" });
+        router.push('/admin');
+      }
+      setLoading(false);
+    }
+  }, [params.id, isNew, router, toast]);
+
+  const selectedComponent = components.find(c => c.id === selectedComponentId) || null;
+
+  const handleUpdateComponent = (id: string, newProps: Partial<BuilderComponent>) => {
+    setComponents(prev => prev.map(c => c.id === id ? { ...c, ...newProps } : c));
+  };
+  
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (!over) return;
+    
+    // Dropping from Toolbox
+    if (active.id.toString().startsWith('toolbox-')) {
+        const type = active.data.current?.type as BuilderComponent['type'];
+        let newComponent: BuilderComponent;
+
+        switch (type) {
+            case 'Text':
+                newComponent = { id: uuidv4(), type: 'Text', text: 'New Text Block' };
+                break;
+            case 'Button':
+                newComponent = { id: uuidv4(), type: 'Button', text: 'New Button' };
+                break;
+            default:
+                return;
+        }
+
+        const overIndex = over.id === 'canvas' ? components.length : components.findIndex(c => c.id === over.id);
+        
+        setComponents(prev => {
+            const newItems = [...prev];
+            newItems.splice(overIndex, 0, newComponent);
+            return newItems;
+        });
+        setSelectedComponentId(newComponent.id);
+        return;
+    }
+    
+    // Reordering in Canvas
+    if (active.id !== over.id) {
+        setComponents(items => {
+            const oldIndex = items.findIndex(item => item.id === active.id);
+            const newIndex = items.findIndex(item => item.id === over.id);
+            if (oldIndex === -1 || newIndex === -1) return items;
+            return arrayMove(items, oldIndex, newIndex);
+        });
+    }
+  };
+  
+  const handleSave = async () => {
+    const descriptionHtml = componentToHtml(components);
+    const propertyData = { ...property, description: descriptionHtml } as Property;
+
+    try {
+        if (isNew) {
+            await createProperty(propertyData);
+            toast({ title: "Property Created!", description: "The new property has been saved." });
+        } else {
+            await updateProperty(propertyData);
+            toast({ title: "Property Updated!", description: "Your changes have been saved." });
+        }
+        router.push('/admin');
+        router.refresh(); // To reflect changes in the admin list
+    } catch (error) {
+        toast({
+            title: "Error Saving Property",
+            description: "There was an error saving the property details.",
+            variant: "destructive",
+        });
+    }
+  };
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const { name, value } = e.target;
+      setProperty(prev => ({ ...prev, [name]: name === 'price' || name === 'bedrooms' || name === 'bathrooms' || name === 'area' ? parseFloat(value) : value }));
+  }
+
+  const activeComponentType = activeId && activeId.startsWith('toolbox-') ? activeId.split('-')[1] as BuilderComponent['type'] : null;
+  
+  if (loading) {
+      return <div className="flex h-screen items-center justify-center">Loading...</div>
+  }
+
+  return (
+    <DndContext onDragEnd={handleDragEnd} onDragStart={e => setActiveId(e.active.id.toString())}>
+      <div className="flex flex-col h-screen bg-background text-foreground">
+        <header className="flex items-center justify-between p-4 border-b">
+            <h1 className="text-2xl font-bold font-headline">{isNew ? 'Create New Property' : `Editing: ${property.title}`}</h1>
+            <Button onClick={handleSave}>
+                <Save className="mr-2" />
+                {isNew ? 'Save Property' : 'Update Property'}
+            </Button>
+        </header>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] flex-grow overflow-hidden">
+            {/* Main Edit Area */}
+            <div className="flex flex-col overflow-y-auto">
+                {/* Property Details Form */}
+                <div className="p-6 border-b">
+                   <Card>
+                       <CardHeader><CardTitle>Property Details</CardTitle></CardHeader>
+                       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <Label htmlFor="title">Title</Label>
+                                <Input id="title" name="title" value={property.title} onChange={handleInputChange} />
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="location">Location</Label>
+                                <Input id="location" name="location" value={property.location} onChange={handleInputChange} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="price">Price (per month)</Label>
+                                <Input id="price" name="price" type="number" value={property.price} onChange={handleInputChange} />
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="type">Type</Label>
+                                <Input id="type" name="type" value={property.type} onChange={handleInputChange} />
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="bedrooms">Bedrooms</Label>
+                                <Input id="bedrooms" name="bedrooms" type="number" value={property.bedrooms} onChange={handleInputChange} />
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="bathrooms">Bathrooms</Label>
+                                <Input id="bathrooms" name="bathrooms" type="number" value={property.bathrooms} onChange={handleInputChange} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="area">Area (sqft)</Label>
+                                <Input id="area" name="area" type="number" value={property.area} onChange={handleInputChange} />
+                            </div>
+                       </CardContent>
+                   </Card>
+                </div>
+
+                {/* Description Builder */}
+                 <div className="p-6 flex-grow flex flex-col">
+                    <h2 className="text-xl font-bold mb-4">Property Description Builder</h2>
+                    <div className="grid grid-cols-[250px_1fr] flex-grow gap-6 h-full min-h-[500px]">
+                        <Toolbox />
+                        <Canvas components={components} setComponents={setComponents} selectedComponentId={selectedComponentId} setSelectedComponentId={setSelectedComponentId} />
+                    </div>
+                </div>
+            </div>
+
+            {/* Properties Panel */}
+            <div className="p-4 border-l h-full overflow-y-auto">
+                <PropertiesPanel selectedComponent={selectedComponent} onUpdate={handleUpdateComponent} />
+            </div>
+        </div>
+      </div>
+
+      <DragOverlay>
+        {activeComponentType ? (
+          <div className="flex items-center gap-4 p-2 bg-primary text-primary-foreground rounded-lg border cursor-grabbing shadow-lg">
+             {activeComponentType === 'Text' ? <Type className="w-6 h-6" /> : <RectangleHorizontal className="w-6 h-6" />}
+             <span className="font-medium">{activeComponentType}</span>
+           </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  );
+}

@@ -24,11 +24,10 @@ const properties: Property[] = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Property Details</title>
+    <title>Property Description</title>
 </head>
 <body>
-    <h2>Welcome to this beautiful modern apartment!</h2>
-    <p>This stunning 2-bedroom, 2-bathroom apartment is located in the heart of downtown, offering breathtaking city views and unparalleled convenience. The open-concept living space is perfect for entertaining, featuring floor-to-ceiling windows that flood the apartment with natural light.</p>
+    <p style="font-size: 1rem; margin: 0.5rem 0;">This stunning 2-bedroom, 2-bathroom apartment is located in the heart of downtown, offering breathtaking city views and unparalleled convenience. The open-concept living space is perfect for entertaining, featuring floor-to-ceiling windows that flood the apartment with natural light.</p>
     <button style="background-color: #6d28d9; color: white; padding: 0.5rem 1rem; border: none; border-radius: 0.25rem; cursor: pointer;">Request a Tour</button>
 </body>
 </html>
@@ -50,11 +49,10 @@ const properties: Property[] = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Property Details</title>
+    <title>Property Description</title>
 </head>
 <body>
-    <h2>Charming suburban home with a spacious backyard.</h2>
-    <p>Escape the hustle and bustle in this lovely 3-bedroom house. It features a large backyard, a modern kitchen, and a cozy fireplace. Perfect for families!</p>
+    <p style="font-size: 1rem; margin: 0.5rem 0;">Escape the hustle and bustle in this lovely 3-bedroom house. It features a large backyard, a modern kitchen, and a cozy fireplace. Perfect for families!</p>
 </body>
 </html>
     `,
