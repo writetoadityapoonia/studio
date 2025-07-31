@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { DndContext, DragEndEvent, DragOverlay } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragOverlay, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { v4 as uuidv4 } from 'uuid';
@@ -73,10 +73,11 @@ const CanvasComponent = ({ component, selected, onSelect, onDelete }: { componen
 const Canvas = ({ components, setComponents, selectedComponentId, setSelectedComponentId }: 
   { components: BuilderComponent[], setComponents: React.Dispatch<React.SetStateAction<BuilderComponent[]>>, selectedComponentId: string | null, setSelectedComponentId: (id: string | null) => void }
 ) => {
+  const { setNodeRef } = useDroppable({ id: 'canvas' });
 
   return (
     <SortableContext items={components.map(c => c.id)}>
-      <div className="w-full h-full bg-muted/30 rounded-lg p-8 space-y-2 overflow-y-auto">
+      <div ref={setNodeRef} className="w-full h-full bg-muted/30 rounded-lg p-8 space-y-2 overflow-y-auto">
         {components.length > 0 ? (
           components.map(component => (
             <SortableItem key={component.id} id={component.id}>
@@ -173,6 +174,7 @@ export default function PropertyEditPage() {
   const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(!isNew);
+  const sensors = useSensors(useSensor(PointerSensor));
 
   useEffect(() => {
     if (!isNew && id) {
@@ -207,7 +209,7 @@ export default function PropertyEditPage() {
 
     if (!over) return;
     
-    // Dropping from Toolbox
+    // Dropping from Toolbox to Canvas
     if (active.id.toString().startsWith('toolbox-')) {
         const type = active.data.current?.type as BuilderComponent['type'];
         let newComponent: BuilderComponent;
@@ -223,13 +225,17 @@ export default function PropertyEditPage() {
                 return;
         }
 
-        const overIndex = over.id === 'canvas' ? components.length : components.findIndex(c => c.id === over.id);
-        
-        setComponents(prev => {
-            const newItems = [...prev];
-            newItems.splice(overIndex, 0, newComponent);
-            return newItems;
-        });
+        const overIndex = components.findIndex(c => c.id === over.id);
+
+        if (over.id === 'canvas') {
+           setComponents(prev => [...prev, newComponent]);
+        } else if (overIndex !== -1) {
+            setComponents(prev => {
+                const newItems = [...prev];
+                newItems.splice(overIndex, 0, newComponent);
+                return newItems;
+            });
+        }
         setSelectedComponentId(newComponent.id);
         return;
     }
@@ -239,7 +245,7 @@ export default function PropertyEditPage() {
         setComponents(items => {
             const oldIndex = items.findIndex(item => item.id === active.id);
             const newIndex = items.findIndex(item => item.id === over.id);
-            if (oldIndex === -1 || newIndex === -1) return items;
+            if (oldIndex === -1 || newIndex === -1) return items; // Should not happen
             return arrayMove(items, oldIndex, newIndex);
         });
     }
@@ -274,7 +280,7 @@ export default function PropertyEditPage() {
 
       setProperty(prev => ({ 
           ...prev, 
-          [name]: isNumericField ? (value === '' ? '' : parseFloat(value)) : value 
+          [name]: isNumericField ? (value === '' ? 0 : parseFloat(value)) : value 
       }));
   };
 
@@ -285,7 +291,7 @@ export default function PropertyEditPage() {
   }
 
   return (
-    <DndContext onDragEnd={handleDragEnd} onDragStart={e => setActiveId(e.active.id.toString())}>
+    <DndContext onDragEnd={handleDragEnd} onDragStart={e => setActiveId(e.active.id.toString())} sensors={sensors}>
       <div className="flex flex-col h-screen bg-background text-foreground">
         <header className="flex items-center justify-between p-4 border-b">
             <h1 className="text-2xl font-bold font-headline">{isNew ? 'Create New Property' : `Editing: ${property.title}`}</h1>
