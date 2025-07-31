@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
+import { Header } from '@/components/header';
 import { Suspense } from 'react';
+import { ProgressProvider } from '@/components/progress-provider';
 
 export const metadata: Metadata = {
-  title: 'Frnz Page Builder',
-  description: 'Build your pages with ease.',
+  title: 'Frnz Estates',
+  description: 'The best properties, curated for you.',
   icons: {},
 };
 
@@ -25,11 +27,33 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <div className="flex flex-col min-h-screen">
-          <main className="flex-grow">{children}</main>
-        </div>
+        <ProgressProvider>
+          <div className="flex flex-col min-h-screen">
+            <Header />
+            <main className="flex-grow">{children}</main>
+            <Footer />
+          </div>
+        </ProgressProvider>
         <Toaster />
       </body>
     </html>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="py-6 px-4 md:px-6 border-t bg-background">
+      <div className="container mx-auto flex flex-col items-center justify-between gap-4 sm:flex-row">
+        <p className="text-sm text-muted-foreground">&copy; 2024 Frnz Estates. All rights reserved.</p>
+        <nav className="flex gap-4 sm:gap-6">
+          <a className="text-sm hover:underline" href="#">
+            Terms of Service
+          </a>
+          <a className="text-sm hover:underline" href="#">
+            Privacy
+          </a>
+        </nav>
+      </div>
+    </footer>
   );
 }

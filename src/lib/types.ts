@@ -1,2 +1,12 @@
-// This file is currently empty because the old types are no longer needed.
-// New types for the page builder are defined directly in the page component for now.
+export interface Property {
+  id: string;
+  title: string;
+  location: string;
+  price: number;
+  type: string;
+  bedrooms: number;
+  bathrooms: number | string;
+  area: number;
+  images: string[];
+  description: string;
+}

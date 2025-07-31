@@ -1,17 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { DndContext, DragEndEvent, DragOverEvent, DragOverlay, useDraggable, useDroppable } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragOverlay, useDraggable, useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { v4 as uuidv4 } from 'uuid';
-import { Plus, Trash2, Type, RectangleHorizontal } from 'lucide-react';
+import { Plus, Trash2, Type, RectangleHorizontal, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import { savePageContent } from '@/lib/actions';
 
 
 // --- Component Types ---
@@ -38,6 +39,45 @@ const initialComponents: BuilderComponent[] = [
   { id: uuidv4(), type: 'Text', text: 'Welcome to your page!' },
   { id: uuidv4(), type: 'Button', text: 'Click Me' },
 ];
+
+
+// --- Helper Functions ---
+const componentToHtml = (component: BuilderComponent): string => {
+    switch (component.type) {
+        case 'Text':
+            return `<p style="font-size: 1rem; margin: 0.5rem 0;">${component.text}</p>`;
+        case 'Button':
+            return `<button style="background-color: #6d28d9; color: white; padding: 0.5rem 1rem; border: none; border-radius: 0.25rem; cursor: pointer;">${component.text}</button>`;
+        default:
+            return '';
+    }
+}
+
+const generateHtmlPage = (components: BuilderComponent[]): string => {
+    const bodyContent = components.map(componentToHtml).join('\n');
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page Preview</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.5;
+            padding: 1rem;
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body>
+    ${bodyContent}
+</body>
+</html>
+    `;
+};
+
 
 // --- Toolbox Components ---
 const ToolboxItem = ({ type }: { type: ComponentType }) => {
@@ -108,11 +148,11 @@ const CanvasComponent = ({ component, selected, onSelect, onDelete }: { componen
         { 'border-primary bg-primary/10': selected }
       )}
     >
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
-          <Trash2 className="w-4 h-4 text-destructive" />
-        </Button>
-      </div>
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+                <Trash2 className="w-4 h-4 text-destructive" />
+            </Button>
+        </div>
       {renderComponent()}
     </div>
   );
@@ -127,6 +167,36 @@ const Canvas = ({ components, setComponents, selectedComponentId, setSelectedCom
   });
 
   const componentIds = components.map(c => c.id);
+
+  const handleDrop = (event: DragEndEvent) => {
+     const { active, over } = event;
+     if (!over || !active.id.toString().startsWith('toolbox-')) return;
+     
+     const type = active.data.current?.type as ComponentType;
+     let newComponent: BuilderComponent;
+
+     switch (type) {
+         case 'Text':
+             newComponent = { id: uuidv4(), type: 'Text', text: 'New Text Block' };
+             break;
+         case 'Button':
+             newComponent = { id: uuidv4(), type: 'Button', text: 'New Button' };
+             break;
+         default:
+             return;
+     }
+
+    const overIndex = components.findIndex(c => c.id === over.id);
+    const newIndex = overIndex !== -1 ? overIndex : components.length;
+
+     setComponents(prev => {
+        const newItems = [...prev];
+        newItems.splice(newIndex, 0, newComponent);
+        return newItems;
+     });
+     setSelectedComponentId(newComponent.id);
+  };
+
 
   return (
     <SortableContext items={componentIds}>
@@ -213,6 +283,7 @@ export default function BuilderPage() {
   const [components, setComponents] = useState<BuilderComponent[]>(initialComponents);
   const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const selectedComponent = components.find(c => c.id === selectedComponentId) || null;
 
@@ -220,19 +291,12 @@ export default function BuilderPage() {
     setComponents(prev => prev.map(c => c.id === id ? { ...c, ...newProps } : c));
   };
   
-  const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
-    if (!over) return;
-    
-    if (active.id.toString().startsWith('toolbox-')) {
-       // logic for dropping from toolbox will be in onDragEnd
-    }
-  };
-
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over) return;
+    setActiveId(null);
 
+    if (!over) return;
+    
     // Dropping from Toolbox
     if (active.id.toString().startsWith('toolbox-')) {
         const type = active.data.current?.type as ComponentType;
@@ -249,43 +313,75 @@ export default function BuilderPage() {
                 return;
         }
 
-        setComponents(prev => [...prev, newComponent]);
+        const overIndex = over.id === 'canvas' ? components.length : components.findIndex(c => c.id === over.id);
+        
+        setComponents(prev => {
+            const newItems = [...prev];
+            newItems.splice(overIndex, 0, newComponent);
+            return newItems;
+        });
         setSelectedComponentId(newComponent.id);
         return;
     }
     
     // Reordering in Canvas
-    const activeId = active.id.toString();
+    const activeIdStr = active.id.toString();
     const overId = over.id.toString();
-    if (activeId !== overId) {
+    if (activeIdStr !== overId) {
         setComponents(items => {
-            const oldIndex = items.findIndex(item => item.id === activeId);
+            const oldIndex = items.findIndex(item => item.id === activeIdStr);
             const newIndex = items.findIndex(item => item.id === overId);
+            if (oldIndex === -1 || newIndex === -1) return items;
             return arrayMove(items, oldIndex, newIndex);
         });
     }
-    setActiveId(null);
   };
   
+  const handleSave = async () => {
+    const htmlContent = generateHtmlPage(components);
+    try {
+        await savePageContent(htmlContent);
+        toast({
+            title: "Page Content Saved!",
+            description: "The HTML content has been logged to the server console.",
+        });
+    } catch (error) {
+        toast({
+            title: "Error Saving Content",
+            description: "There was an error saving the page content.",
+            variant: "destructive",
+        });
+    }
+  };
+
   const activeComponentType = activeId && activeId.startsWith('toolbox-') ? activeId.split('-')[1] as ComponentType : null;
 
 
   return (
-    <DndContext onDragEnd={handleDragEnd} onDragOver={handleDragOver} onDragStart={e => setActiveId(e.active.id.toString())}>
-      <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr_350px] h-screen bg-background text-foreground">
-        {/* Toolbox */}
-        <div className="p-4 border-r">
-          <Toolbox />
-        </div>
+    <DndContext onDragEnd={handleDragEnd} onDragStart={e => setActiveId(e.active.id.toString())}>
+      <div className="flex flex-col h-screen bg-background text-foreground">
+        <header className="flex items-center justify-between p-4 border-b">
+            <h1 className="text-2xl font-bold font-headline">Page Builder</h1>
+            <Button onClick={handleSave}>
+                <Save className="mr-2" />
+                Save Page
+            </Button>
+        </header>
+        <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr_350px] flex-grow overflow-hidden">
+            {/* Toolbox */}
+            <div className="p-4 border-r h-full overflow-y-auto">
+            <Toolbox />
+            </div>
 
-        {/* Canvas */}
-        <main className="p-4 h-full overflow-y-auto">
-          <Canvas components={components} setComponents={setComponents} selectedComponentId={selectedComponentId} setSelectedComponentId={setSelectedComponentId} />
-        </main>
+            {/* Canvas */}
+            <main className="p-4 h-full overflow-y-auto">
+            <Canvas components={components} setComponents={setComponents} selectedComponentId={selectedComponentId} setSelectedComponentId={setSelectedComponentId} />
+            </main>
 
-        {/* Properties Panel */}
-        <div className="p-4 border-l">
-          <PropertiesPanel selectedComponent={selectedComponent} onUpdate={handleUpdate} />
+            {/* Properties Panel */}
+            <div className="p-4 border-l h-full overflow-y-auto">
+            <PropertiesPanel selectedComponent={selectedComponent} onUpdate={handleUpdate} />
+            </div>
         </div>
       </div>
       <DragOverlay>
