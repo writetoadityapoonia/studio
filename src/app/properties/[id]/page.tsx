@@ -5,8 +5,8 @@ import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Bath, BedDouble, Ruler, MapPin } from 'lucide-react';
 
-export default function PropertyPage({ params }: { params: { id: string } }) {
-  const property = getPropertyById(params.id);
+export default async function PropertyPage({ params }: { params: { id: string } }) {
+  const property = await getPropertyById(params.id);
 
   if (!property) {
     notFound();

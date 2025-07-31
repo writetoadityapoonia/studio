@@ -175,15 +175,16 @@ export default function PropertyEditPage() {
 
   useEffect(() => {
     if (!isNew && id) {
-      const existingProperty = getPropertyById(id);
-      if (existingProperty) {
-        setProperty(existingProperty);
-        setComponents(generateInitialComponents(existingProperty.description));
-      } else {
-        toast({ title: "Property not found", variant: "destructive" });
-        router.push('/admin');
-      }
-      setLoading(false);
+      getPropertyById(id).then(existingProperty => {
+        if (existingProperty) {
+          setProperty(existingProperty);
+          setComponents(generateInitialComponents(existingProperty.description));
+        } else {
+          toast({ title: "Property not found", variant: "destructive" });
+          router.push('/admin');
+        }
+        setLoading(false);
+      });
     }
   }, [id, isNew, router, toast]);
 
@@ -239,14 +240,14 @@ export default function PropertyEditPage() {
   
   const handleSave = async () => {
     const descriptionHtml = componentToHtml(components);
-    const propertyData = { ...property, description: descriptionHtml } as Property;
+    const propertyData = { ...property, description: descriptionHtml };
 
     try {
         if (isNew) {
-            await createProperty(propertyData);
+            await createProperty(propertyData as Omit<Property, 'id'>);
             toast({ title: "Property Created!", description: "The new property has been saved." });
         } else {
-            await updateProperty(propertyData);
+            await updateProperty({ ...propertyData, id } as Property);
             toast({ title: "Property Updated!", description: "Your changes have been saved." });
         }
         router.push('/admin');
@@ -350,5 +351,3 @@ export default function PropertyEditPage() {
     </DndContext>
   );
 }
-
-    

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PropertyCard } from './property-card';
 import { Button } from './ui/button';
 import { getProperties } from '@/lib/data';
@@ -13,14 +13,23 @@ interface PropertyListProps {
 const PROPERTIES_PER_PAGE = 6;
 
 export function PropertyList({ initialProperties }: PropertyListProps) {
-  const [properties, setProperties] = useState(initialProperties.slice(0, PROPERTIES_PER_PAGE));
-  const [hasMore, setHasMore] = useState(initialProperties.length > PROPERTIES_PER_PAGE);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loadedCount, setLoadedCount] = useState(PROPERTIES_PER_PAGE);
+  const [hasMore, setHasMore] = useState(true);
 
-  const loadMore = () => {
-    const allProperties = getProperties();
-    const nextProperties = allProperties.slice(0, properties.length + PROPERTIES_PER_PAGE);
-    setProperties(nextProperties);
-    setHasMore(allProperties.length > nextProperties.length);
+  useEffect(() => {
+    // Set initial properties from server props
+    setProperties(initialProperties.slice(0, PROPERTIES_PER_PAGE));
+    setHasMore(initialProperties.length > PROPERTIES_PER_PAGE);
+  }, [initialProperties]);
+
+  const loadMore = async () => {
+    // Fetch all properties again to get the latest data
+    const allProperties = await getProperties();
+    const nextLoadedCount = loadedCount + PROPERTIES_PER_PAGE;
+    setProperties(allProperties.slice(0, nextLoadedCount));
+    setLoadedCount(nextLoadedCount);
+    setHasMore(allProperties.length > nextLoadedCount);
   };
 
   return (

@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlusCircle, Edit } from 'lucide-react';
 
-export default function AdminDashboard() {
-  const properties = getProperties();
+export default async function AdminDashboard() {
+  const properties = await getProperties();
 
   return (
     <div className="container mx-auto py-10">
