@@ -5,7 +5,7 @@ import { DndContext, DragEndEvent, DragOverEvent, DragOverlay, useDraggable, use
 import { SortableContext, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { v4 as uuidv4 } from 'uuid';
-import { GripVertical, Plus, Trash2, Type, SmartHome } from 'lucide-react';
+import { Plus, Trash2, Type, RectangleHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -46,7 +46,7 @@ const ToolboxItem = ({ type }: { type: ComponentType }) => {
     data: { type },
   });
 
-  const Icon = type === 'Text' ? Type : SmartHome;
+  const Icon = type === 'Text' ? Type : RectangleHorizontal;
 
   return (
     <div ref={setNodeRef} {...attributes} {...listeners} className="flex items-center gap-4 p-2 bg-card rounded-lg border cursor-grab">
@@ -291,7 +291,7 @@ export default function BuilderPage() {
       <DragOverlay>
         {activeComponentType ? (
           <div className="flex items-center gap-4 p-2 bg-primary text-primary-foreground rounded-lg border cursor-grabbing shadow-lg">
-             {activeComponentType === 'Text' ? <Type className="w-6 h-6" /> : <SmartHome className="w-6 h-6" />}
+             {activeComponentType === 'Text' ? <Type className="w-6 h-6" /> : <RectangleHorizontal className="w-6 h-6" />}
              <span className="font-medium">{activeComponentType}</span>
            </div>
         ) : null}
