@@ -1,14 +1,11 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { Header } from '@/components/layout/header';
-import { Footer } from '@/components/layout/footer';
-import { ProgressBar } from '@/components/progress-bar';
 import { Suspense } from 'react';
 
 export const metadata: Metadata = {
-  title: 'Frnz Estates',
-  description: 'Find your next dream home with Frnz Estates.',
+  title: 'Frnz Page Builder',
+  description: 'Build your pages with ease.',
   icons: {},
 };
 
@@ -29,12 +26,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <div className="flex flex-col min-h-screen">
-          <Suspense>
-            <ProgressBar />
-          </Suspense>
-          <Header />
-          <main className="flex-grow pt-16">{children}</main>
-          <Footer />
+          <main className="flex-grow">{children}</main>
         </div>
         <Toaster />
       </body>
