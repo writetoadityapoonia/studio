@@ -150,10 +150,10 @@ const PropertiesPanel = ({ selectedComponent, onUpdate }: { selectedComponent: B
   );
 };
 
-export default function PropertyEditPage({ params }: { params: { id: string } }) {
+export default function PropertyEditPage({ params: { id } }: { params: { id: string } }) {
   const router = useRouter();
   const { toast } = useToast();
-  const isNew = params.id === 'new';
+  const isNew = id === 'new';
   
   const [property, setProperty] = useState<Partial<Property>>({
       title: '',
@@ -172,7 +172,7 @@ export default function PropertyEditPage({ params }: { params: { id: string } })
 
   useEffect(() => {
     if (!isNew) {
-      const existingProperty = getPropertyById(params.id);
+      const existingProperty = getPropertyById(id);
       if (existingProperty) {
         setProperty(existingProperty);
         setComponents(generateInitialComponents(existingProperty.description));
@@ -182,7 +182,7 @@ export default function PropertyEditPage({ params }: { params: { id: string } })
       }
       setLoading(false);
     }
-  }, [params.id, isNew, router, toast]);
+  }, [id, isNew, router, toast]);
 
   const selectedComponent = components.find(c => c.id === selectedComponentId) || null;
 
