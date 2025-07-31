@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -177,7 +178,13 @@ export default function PropertyEditPage() {
     if (!isNew && id) {
       getPropertyById(id).then(existingProperty => {
         if (existingProperty) {
-          setProperty(existingProperty);
+          setProperty({
+            ...existingProperty,
+            price: existingProperty.price ?? 0,
+            bedrooms: existingProperty.bedrooms ?? 0,
+            bathrooms: existingProperty.bathrooms ?? 0,
+            area: existingProperty.area ?? 0,
+          });
           setComponents(generateInitialComponents(existingProperty.description));
         } else {
           toast({ title: "Property not found", variant: "destructive" });
@@ -263,8 +270,13 @@ export default function PropertyEditPage() {
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const { name, value } = e.target;
-      setProperty(prev => ({ ...prev, [name]: name === 'price' || name === 'bedrooms' || name === 'bathrooms' || name === 'area' ? parseFloat(value) : value }));
-  }
+      const isNumericField = ['price', 'bedrooms', 'bathrooms', 'area'].includes(name);
+
+      setProperty(prev => ({ 
+          ...prev, 
+          [name]: isNumericField ? (value === '' ? '' : parseFloat(value)) : value 
+      }));
+  };
 
   const activeComponentType = activeId && activeId.startsWith('toolbox-') ? activeId.split('-')[1] as BuilderComponent['type'] : null;
   
@@ -301,7 +313,7 @@ export default function PropertyEditPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="price">Price (per month)</Label>
-                                <Input id="price" name="price" type="number" value={property.price} onChange={handleInputChange} />
+                                <Input id="price" name="price" type="number" value={property.price || ''} onChange={handleInputChange} />
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="type">Type</Label>
@@ -309,15 +321,15 @@ export default function PropertyEditPage() {
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="bedrooms">Bedrooms</Label>
-                                <Input id="bedrooms" name="bedrooms" type="number" value={property.bedrooms} onChange={handleInputChange} />
+                                <Input id="bedrooms" name="bedrooms" type="number" value={property.bedrooms || ''} onChange={handleInputChange} />
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="bathrooms">Bathrooms</Label>
-                                <Input id="bathrooms" name="bathrooms" type="number" value={property.bathrooms} onChange={handleInputChange} />
+                                <Input id="bathrooms" name="bathrooms" type="number" value={property.bathrooms || ''} onChange={handleInputChange} />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="area">Area (sqft)</Label>
-                                <Input id="area" name="area" type="number" value={property.area} onChange={handleInputChange} />
+                                <Input id="area" name="area" type="number" value={property.area || ''} onChange={handleInputChange} />
                             </div>
                        </CardContent>
                    </Card>
