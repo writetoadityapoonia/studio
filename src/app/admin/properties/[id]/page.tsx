@@ -150,7 +150,8 @@ const PropertiesPanel = ({ selectedComponent, onUpdate }: { selectedComponent: B
   );
 };
 
-export default function PropertyEditPage({ params: { id } }: { params: { id: string } }) {
+export default function PropertyEditPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const router = useRouter();
   const { toast } = useToast();
   const isNew = id === 'new';
