@@ -40,3 +40,19 @@ export async function updateProperty(propertyData: Property) {
     revalidatePath(`/properties/${id}`);
     revalidatePath('/');
 }
+
+
+export async function deleteProperty(id: string) {
+    if (!ObjectId.isValid(id)) {
+        throw new Error("Invalid ID format");
+    }
+    const collection = await getPropertiesCollection();
+    const result = await collection.deleteOne({ _id: new ObjectId(id) });
+
+    if (result.deletedCount === 0) {
+        throw new Error("Property not found");
+    }
+
+    revalidatePath('/admin');
+    revalidatePath('/');
+}

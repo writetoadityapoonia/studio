@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -7,7 +5,7 @@ import { DndContext, DragEndEvent, DragOverlay, useDroppable, PointerSensor, use
 import { SortableContext, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { v4 as uuidv4 } from 'uuid';
-import { Plus, Trash2, Type, RectangleHorizontal, Save, GripVertical } from 'lucide-react';
+import { Plus, Trash2, Type, RectangleHorizontal, Save, GripVertical, TableIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -19,8 +17,8 @@ import { createProperty, updateProperty } from '@/lib/actions';
 import { getPropertyById } from '@/lib/data';
 import type { Property } from '@/lib/types';
 import { useRouter, useParams } from 'next/navigation';
-import { Toolbox, BuilderComponent, componentToHtml, generateInitialComponents } from '@/components/builder-elements';
-
+import { Toolbox, BuilderComponent, componentToHtml, generateInitialComponents, TextSize } from '@/components/builder-elements';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 function SortableItem({ id, children }: { id: string; children: React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
@@ -44,9 +42,34 @@ const CanvasComponent = ({ component, selected, onSelect, onDelete }: { componen
   const renderComponent = () => {
     switch (component.type) {
       case 'Text':
-        return <p className="text-lg">{component.text}</p>;
+        const fontSizeMap = { sm: 'text-sm', md: 'text-base', lg: 'text-lg', xl: 'text-xl' };
+        return <p className={cn("py-2", fontSizeMap[component.size])}>{component.text}</p>;
       case 'Button':
         return <Button>{component.text}</Button>;
+       case 'Table':
+        try {
+            const tableData: {[key: string]: string}[] = JSON.parse(component.data);
+             if (!Array.isArray(tableData) || tableData.length === 0) return <p className="text-muted-foreground">Table is empty</p>;
+            const headers = Object.keys(tableData[0]);
+            return (
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-muted/50">
+                            <tr>{headers.map(h => <th key={h} className="p-2 font-medium">{h}</th>)}</tr>
+                        </thead>
+                        <tbody>
+                            {tableData.map((row, i) => (
+                                <tr key={i} className="border-b">
+                                    {headers.map(h => <td key={h} className="p-2">{row[h]}</td>)}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )
+        } catch(e) {
+            return <p className="text-destructive">Invalid table data format.</p>
+        }
       default:
         return null;
     }
@@ -73,11 +96,11 @@ const CanvasComponent = ({ component, selected, onSelect, onDelete }: { componen
 const Canvas = ({ components, setComponents, selectedComponentId, setSelectedComponentId }: 
   { components: BuilderComponent[], setComponents: React.Dispatch<React.SetStateAction<BuilderComponent[]>>, selectedComponentId: string | null, setSelectedComponentId: (id: string | null) => void }
 ) => {
-  const { setNodeRef } = useDroppable({ id: 'canvas' });
+  const { setNodeRef, isOver } = useDroppable({ id: 'canvas' });
 
   return (
     <SortableContext items={components.map(c => c.id)}>
-      <div ref={setNodeRef} className="w-full h-full bg-muted/30 rounded-lg p-8 space-y-2 overflow-y-auto">
+      <div ref={setNodeRef} className={cn("w-full h-full bg-muted/30 rounded-lg p-8 space-y-2 overflow-y-auto", {"bg-primary/10": isOver})}>
         {components.length > 0 ? (
           components.map(component => (
             <SortableItem key={component.id} id={component.id}>
@@ -122,6 +145,33 @@ const PropertiesPanel = ({ selectedComponent, onUpdate }: { selectedComponent: B
   const renderProperties = () => {
     switch (selectedComponent.type) {
       case 'Text':
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="text">Text Content</Label>
+              <Textarea
+                id="text"
+                value={selectedComponent.text}
+                onChange={(e) => onUpdate(selectedComponent.id, { text: e.target.value })}
+                className="min-h-[100px]"
+              />
+            </div>
+             <div>
+                <Label htmlFor="size">Font Size</Label>
+                <Select value={selectedComponent.size} onValueChange={(value: TextSize) => onUpdate(selectedComponent.id, { size: value })}>
+                    <SelectTrigger id="size">
+                        <SelectValue placeholder="Select size" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="sm">Small</SelectItem>
+                        <SelectItem value="md">Medium</SelectItem>
+                        <SelectItem value="lg">Large</SelectItem>
+                        <SelectItem value="xl">Extra Large</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+          </div>
+        );
       case 'Button':
         return (
           <div className="space-y-4">
@@ -136,6 +186,22 @@ const PropertiesPanel = ({ selectedComponent, onUpdate }: { selectedComponent: B
             </div>
           </div>
         );
+       case 'Table':
+        return (
+            <div className="space-y-4">
+                <div>
+                    <Label htmlFor="table-data">Table Data (JSON)</Label>
+                    <Textarea
+                        id="table-data"
+                        value={selectedComponent.data}
+                        onChange={(e) => onUpdate(selectedComponent.id, { data: e.target.value })}
+                        className="min-h-[200px] font-mono"
+                        placeholder={'[\n  {\n    "Header 1": "Row 1 Cell 1",\n    "Header 2": "Row 1 Cell 2"\n  }\n]'}
+                    />
+                     <p className="text-xs text-muted-foreground mt-2">Enter an array of objects in JSON format.</p>
+                </div>
+            </div>
+        )
       default:
         return null;
     }
@@ -187,7 +253,7 @@ export default function PropertyEditPage() {
             bathrooms: existingProperty.bathrooms ?? 0,
             area: existingProperty.area ?? 0,
           });
-          setComponents(generateInitialComponents(existingProperty.description));
+          setComponents(generateInitialComponents(existingProperty.description || ''));
         } else {
           toast({ title: "Property not found", variant: "destructive" });
           router.push('/admin');
@@ -216,10 +282,13 @@ export default function PropertyEditPage() {
 
         switch (type) {
             case 'Text':
-                newComponent = { id: uuidv4(), type: 'Text', text: 'New Text Block' };
+                newComponent = { id: uuidv4(), type: 'Text', text: 'New Text Block', size: 'md' };
                 break;
             case 'Button':
                 newComponent = { id: uuidv4(), type: 'Button', text: 'New Button' };
+                break;
+            case 'Table':
+                newComponent = { id: uuidv4(), type: 'Table', data: '[\n  {\n    "Feature": "Value",\n    "Description": "Details about the feature"\n  }\n]' };
                 break;
             default:
                 return;
@@ -230,9 +299,11 @@ export default function PropertyEditPage() {
         if (over.id === 'canvas') {
            setComponents(prev => [...prev, newComponent]);
         } else if (overIndex !== -1) {
+            const isBelow = event.delta.y > 0;
+            const insertIndex = isBelow ? overIndex + 1 : overIndex;
             setComponents(prev => {
                 const newItems = [...prev];
-                newItems.splice(overIndex, 0, newComponent);
+                newItems.splice(insertIndex, 0, newComponent);
                 return newItems;
             });
         }
@@ -280,11 +351,11 @@ export default function PropertyEditPage() {
 
       setProperty(prev => ({ 
           ...prev, 
-          [name]: isNumericField ? (value === '' ? 0 : parseFloat(value)) : value 
+          [name]: isNumericField ? (value === '' ? '' : parseFloat(value)) : value 
       }));
   };
 
-  const activeComponentType = activeId && activeId.startsWith('toolbox-') ? activeId.split('-')[1] as BuilderComponent['type'] : null;
+  const activeComponentType = activeId && activeId.toString().startsWith('toolbox-') ? activeId.toString().split('-')[1] as BuilderComponent['type'] : null;
   
   if (loading && !isNew) {
       return <div className="flex h-screen items-center justify-center">Loading...</div>
@@ -361,7 +432,9 @@ export default function PropertyEditPage() {
       <DragOverlay>
         {activeComponentType ? (
           <div className="flex items-center gap-4 p-2 bg-primary text-primary-foreground rounded-lg border cursor-grabbing shadow-lg">
-             {activeComponentType === 'Text' ? <Type className="w-6 h-6" /> : <RectangleHorizontal className="w-6 h-6" />}
+             {activeComponentType === 'Text' && <Type className="w-6 h-6" />}
+             {activeComponentType === 'Button' && <RectangleHorizontal className="w-6 h-6" />}
+             {activeComponentType === 'Table' && <TableIcon className="w-6 h-6" />}
              <span className="font-medium">{activeComponentType}</span>
            </div>
         ) : null}
