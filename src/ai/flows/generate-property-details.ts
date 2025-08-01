@@ -62,4 +62,7 @@ export async function generatePropertyDetails(input: GeneratePropertyDetailsInpu
     if (error instanceof z.ZodError) {
         console.error("Zod validation failed:", error.issues);
     }
-    // Re-throw a generic error to
+    // Re-throw a generic error to be caught by the client
+    throw new Error('Failed to generate property details.');
+  }
+}
