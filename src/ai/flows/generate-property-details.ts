@@ -2,49 +2,13 @@
 /**
  * @fileOverview A flow for generating structured property details from raw text.
  *
- * - generatePropertyDetails - A function that takes raw text and returns structured data.
- * - GeneratePropertyDetailsInput - The input type for the generatePropertyDetails function.
- * - GeneratePropertyDetailsOutput - The return type for the generatePropertyDetails function.
+ * This file only exports the server-side function `generatePropertyDetails`.
+ * Schemas and types are defined in `schemas.ts`.
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'zod';
-
-// Input Schema
-export const GeneratePropertyDetailsInputSchema = z.object({
-  rawText: z.string().describe('The raw, unstructured text describing a property.'),
-});
-export type GeneratePropertyDetailsInput = z.infer<typeof GeneratePropertyDetailsInputSchema>;
-
-// Schemas for structured description
-const DescriptionTextSchema = z.object({
-    type: z.literal('Text'),
-    data: z.string().describe('A paragraph of text for the description.'),
-});
-
-const DescriptionTableSchema = z.object({
-    type: z.literal('Table'),
-    data: z.object({
-        headers: z.array(z.string()).describe('The headers for the table.'),
-        rows: z.array(z.array(z.string())).describe('The rows of the table, where each inner array is a row.'),
-    }).describe('A table of features or amenities.'),
-});
-
-const DescriptionComponentSchema = z.union([DescriptionTextSchema, DescriptionTableSchema]);
-
-
-// Output Schema
-export const GeneratePropertyDetailsOutputSchema = z.object({
-  title: z.string().describe('A concise, attractive title for the property listing.'),
-  location: z.string().describe('The full address or location of the property.'),
-  price: z.number().describe('The monthly rental price as a number.'),
-  type: z.string().describe('The type of property (e.g., Apartment, House, Condo).'),
-  bedrooms: z.number().describe('The number of bedrooms.'),
-  bathrooms: z.number().describe('The number of bathrooms.'),
-  area: z.number().describe('The total square footage of the property.'),
-  description: z.array(DescriptionComponentSchema).describe('A structured description of the property, composed of text paragraphs and tables of amenities.'),
-});
-export type GeneratePropertyDetailsOutput = z.infer<typeof GeneratePropertyDetailsOutputSchema>;
+import { GeneratePropertyDetailsInputSchema, GeneratePropertyDetailsOutputSchema } from './schemas';
+import type { GeneratePropertyDetailsInput, GeneratePropertyDetailsOutput } from './schemas';
 
 
 // The exported wrapper function that calls the flow

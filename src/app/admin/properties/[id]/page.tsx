@@ -21,7 +21,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { Toolbox, BuilderComponent, componentToHtml, generateInitialComponents, TextSize, TableComponent } from '@/components/builder-elements';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ClientOnly } from '@/components/client-only';
-import { generatePropertyDetails, GeneratePropertyDetailsOutput } from '@/ai/flows/generate-property-details';
+import { generatePropertyDetails } from '@/ai/flows/generate-property-details';
+import type { GeneratePropertyDetailsOutput } from '@/ai/flows/schemas';
 
 
 function SortableItem({ id, children }: { id: string; children: React.ReactNode }) {
