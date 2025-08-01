@@ -9,7 +9,7 @@
 import { ai } from '@/ai/genkit';
 import { GeneratePropertyDetailsInputSchema, GeneratePropertyDetailsOutputSchema } from './schemas';
 import type { GeneratePropertyDetailsInput, GeneratePropertyDetailsOutput } from './schemas';
-import { googleAI } from '@genkit-ai/googleai';
+import { groq } from '@genkit-ai/groq';
 
 
 // The exported wrapper function that calls the flow
@@ -23,7 +23,7 @@ const propertyDetailsPrompt = ai.definePrompt({
   name: 'propertyDetailsPrompt',
   input: { schema: GeneratePropertyDetailsInputSchema },
   output: { schema: GeneratePropertyDetailsOutputSchema },
-  model: googleAI.model('gemini-pro'),
+  model: groq('llama3-8b-8192'),
   prompt: `You are an expert real estate agent tasked with creating a compelling property listing.
 Analyze the following raw text and extract the property details into a structured JSON format.
 
