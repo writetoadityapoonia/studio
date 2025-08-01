@@ -6,7 +6,7 @@ import { DndContext, DragEndEvent, DragOverlay, useDroppable, PointerSensor, use
 import { SortableContext, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { v4 as uuidv4 } from 'uuid';
-import { Plus, Trash2, Type, RectangleHorizontal, Save, GripVertical, TableIcon } from 'lucide-react';
+import { Plus, Trash2, Type, RectangleHorizontal, Save, GripVertical, TableIcon, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,11 +18,11 @@ import { createProperty, updateProperty } from '@/lib/actions';
 import { getPropertyById } from '@/lib/data';
 import type { Property } from '@/lib/types';
 import { useRouter, useParams } from 'next/navigation';
-import { Toolbox, BuilderComponent, componentToHtml, generateInitialComponents, TextSize } from '@/components/builder-elements';
+import { Toolbox, BuilderComponent, componentToHtml, generateInitialComponents, TextSize, TableComponent } from '@/components/builder-elements';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { deleteProperty } from '@/lib/actions';
 import { ClientOnly } from '@/components/client-only';
+import { generatePropertyDetails, GeneratePropertyDetailsOutput } from '@/ai/flows/generate-property-details';
+
 
 function SortableItem({ id, children }: { id: string; children: React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
@@ -51,29 +51,29 @@ const CanvasComponent = ({ component, selected, onSelect, onDelete }: { componen
       case 'Button':
         return <Button>{component.text}</Button>;
        case 'Table':
-        try {
-            const tableData: {[key: string]: string}[] = JSON.parse(component.data);
-             if (!Array.isArray(tableData) || tableData.length === 0) return <p className="text-muted-foreground">Table is empty</p>;
-            const headers = Object.keys(tableData[0]);
+            if (!Array.isArray(component.headers) || !Array.isArray(component.rows)) {
+                return <p className="text-destructive">Invalid table data.</p>;
+            }
+            if (component.headers.length === 0 || component.rows.length === 0) {
+                 return <p className="text-muted-foreground">Table is empty. Add headers and rows in the properties panel.</p>
+            }
+
             return (
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
                         <thead className="bg-muted/50">
-                            <tr>{headers.map(h => <th key={h} className="p-2 font-medium">{h}</th>)}</tr>
+                            <tr>{component.headers.map((h, i) => <th key={i} className="p-2 font-medium">{h}</th>)}</tr>
                         </thead>
                         <tbody>
-                            {tableData.map((row, i) => (
+                            {component.rows.map((row, i) => (
                                 <tr key={i} className="border-b">
-                                    {headers.map(h => <td key={h} className="p-2">{row[h]}</td>)}
+                                    {row.map((cell, j) => <td key={j} className="p-2">{cell}</td>)}
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
             )
-        } catch(e) {
-            return <p className="text-destructive">Invalid table data format.</p>
-        }
       default:
         return null;
     }
@@ -83,7 +83,7 @@ const CanvasComponent = ({ component, selected, onSelect, onDelete }: { componen
     <div
       onClick={onSelect}
       className={cn(
-        'p-4 my-2 border-2 border-dashed border-transparent transition-all rounded-lg cursor-pointer bg-background',
+        'p-4 my-2 border-2 border-dashed border-transparent transition-all rounded-lg cursor-pointer bg-background relative group',
         { 'border-primary bg-primary/10': selected }
       )}
     >
@@ -124,7 +124,7 @@ const Canvas = ({ components, setComponents, selectedComponentId, setSelectedCom
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
             <Plus className="w-12 h-12 mb-4" />
-            <p>Drag elements from the toolbox here to build the property description.</p>
+            <p>Drag elements from the toolbox here or use the AI generator.</p>
           </div>
         )}
       </div>
@@ -145,6 +145,48 @@ const PropertiesPanel = ({ selectedComponent, onUpdate }: { selectedComponent: B
       </Card>
     );
   }
+
+    const handleTableChange = (rowIndex: number, colIndex: number, value: string) => {
+        if (selectedComponent.type !== 'Table') return;
+        const newRows = [...selectedComponent.rows];
+        newRows[rowIndex][colIndex] = value;
+        onUpdate(selectedComponent.id, { rows: newRows });
+    };
+
+    const handleHeaderChange = (colIndex: number, value: string) => {
+        if (selectedComponent.type !== 'Table') return;
+        const newHeaders = [...selectedComponent.headers];
+        newHeaders[colIndex] = value;
+        onUpdate(selectedComponent.id, { headers: newHeaders });
+    };
+
+    const addRow = () => {
+        if (selectedComponent.type !== 'Table') return;
+        const newRows = [...selectedComponent.rows, Array(selectedComponent.headers.length).fill('')];
+        onUpdate(selectedComponent.id, { rows: newRows });
+    };
+    
+    const addColumn = () => {
+        if (selectedComponent.type !== 'Table') return;
+        const newHeaders = [...selectedComponent.headers, 'New Header'];
+        const newRows = selectedComponent.rows.map(row => [...row, '']);
+        onUpdate(selectedComponent.id, { headers: newHeaders, rows: newRows });
+    };
+
+    const removeRow = (index: number) => {
+        if (selectedComponent.type !== 'Table') return;
+        const newRows = selectedComponent.rows.filter((_, i) => i !== index);
+        onUpdate(selectedComponent.id, { rows: newRows });
+    }
+    
+    const removeColumn = (index: number) => {
+        if (selectedComponent.type !== 'Table') return;
+        if (selectedComponent.headers.length <= 1) return;
+        const newHeaders = selectedComponent.headers.filter((_, i) => i !== index);
+        const newRows = selectedComponent.rows.map(row => row.filter((_, i) => i !== index));
+        onUpdate(selectedComponent.id, { headers: newHeaders, rows: newRows });
+    }
+
 
   const renderProperties = () => {
     switch (selectedComponent.type) {
@@ -193,16 +235,32 @@ const PropertiesPanel = ({ selectedComponent, onUpdate }: { selectedComponent: B
        case 'Table':
         return (
             <div className="space-y-4">
-                <div>
-                    <Label htmlFor="table-data">Table Data (JSON)</Label>
-                    <Textarea
-                        id="table-data"
-                        value={selectedComponent.data}
-                        onChange={(e) => onUpdate(selectedComponent.id, { data: e.target.value })}
-                        className="min-h-[200px] font-mono"
-                        placeholder={'[\n  {\n    "Header 1": "Row 1 Cell 1",\n    "Header 2": "Row 1 Cell 2"\n  }\n]'}
-                    />
-                     <p className="text-xs text-muted-foreground mt-2">Enter an array of objects in JSON format.</p>
+                <div className="space-y-2">
+                    <Label>Table Content</Label>
+                    <div className="space-y-2 rounded-md border p-2">
+                         {selectedComponent.headers.map((header, colIndex) => (
+                             <div key={colIndex} className="flex items-center gap-2">
+                                <Input value={header} onChange={e => handleHeaderChange(colIndex, e.target.value)} placeholder={`Header ${colIndex + 1}`} className="font-bold"/>
+                                 <Button variant="ghost" size="icon" onClick={() => removeColumn(colIndex)} disabled={selectedComponent.headers.length <= 1}>
+                                    <Trash2 className="w-4 h-4 text-destructive"/>
+                                </Button>
+                             </div>
+                         ))}
+                        {selectedComponent.rows.map((row, rowIndex) => (
+                            <div key={rowIndex} className="flex items-center gap-2">
+                                {row.map((cell, colIndex) => (
+                                     <Input key={colIndex} value={cell} onChange={(e) => handleTableChange(rowIndex, colIndex, e.target.value)} />
+                                ))}
+                                <Button variant="ghost" size="icon" onClick={() => removeRow(rowIndex)}>
+                                    <Trash2 className="w-4 h-4 text-destructive"/>
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                 <div className="flex gap-2">
+                    <Button onClick={addRow} variant="outline" size="sm">Add Row</Button>
+                    <Button onClick={addColumn} variant="outline" size="sm">Add Column</Button>
                 </div>
             </div>
         )
@@ -245,6 +303,9 @@ export default function PropertyEditPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(!isNew);
   const sensors = useSensors(useSensor(PointerSensor));
+
+  const [aiContent, setAiContent] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     if (!isNew && id) {
@@ -292,7 +353,7 @@ export default function PropertyEditPage() {
                 newComponent = { id: uuidv4(), type: 'Button', text: 'New Button' };
                 break;
             case 'Table':
-                newComponent = { id: uuidv4(), type: 'Table', data: '[\n  {\n    "Feature": "Value",\n    "Description": "Details about the feature"\n  }\n]' };
+                newComponent = { id: uuidv4(), type: 'Table', headers: ['Feature', 'Value'], rows: [['Bedrooms', '3'], ['Bathrooms', '2']] };
                 break;
             default:
                 return;
@@ -356,6 +417,56 @@ export default function PropertyEditPage() {
       }));
   };
 
+    const handleGenerate = async () => {
+        if (!aiContent) {
+            toast({ title: "Content is empty", description: "Please paste some content to generate details.", variant: "destructive" });
+            return;
+        }
+        setIsGenerating(true);
+        try {
+            const result: GeneratePropertyDetailsOutput = await generatePropertyDetails({ rawText: aiContent });
+
+            setProperty(prev => ({
+                ...prev,
+                title: result.title,
+                location: result.location,
+                price: result.price,
+                type: result.type,
+                bedrooms: result.bedrooms,
+                bathrooms: result.bathrooms,
+                area: result.area,
+            }));
+            
+            const newComponents: BuilderComponent[] = result.description.map(item => {
+                if(item.type === 'Table') {
+                     const tableComp: TableComponent = {
+                        id: uuidv4(),
+                        type: 'Table',
+                        headers: item.data.headers,
+                        rows: item.data.rows
+                    }
+                    return tableComp;
+                }
+                // Default to text for now
+                return {
+                    id: uuidv4(),
+                    type: 'Text',
+                    text: item.data as string,
+                    size: 'md'
+                }
+            })
+            setComponents(newComponents);
+
+            toast({ title: "Generation Complete!", description: "The property details have been filled in." });
+
+        } catch (error) {
+            toast({ title: "AI Generation Failed", description: "Could not generate details from the provided text.", variant: "destructive" });
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+
   const activeComponentType = activeId && activeId.toString().startsWith('toolbox-') ? activeId.toString().split('-')[1] as BuilderComponent['type'] : null;
   
   if (loading && !isNew) {
@@ -377,6 +488,27 @@ export default function PropertyEditPage() {
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] flex-grow overflow-hidden">
               {/* Main Edit Area */}
               <div className="flex flex-col overflow-y-auto">
+                   {/* AI Generator */}
+                   <div className="p-6 border-b">
+                     <Card>
+                         <CardHeader><CardTitle className="flex items-center gap-2"><Sparkles className="text-primary"/> AI Content Generator</CardTitle></CardHeader>
+                         <CardContent className="space-y-4">
+                            <Textarea 
+                                placeholder="Paste the raw property description here. Include details like address, price, number of beds/baths, square footage, amenities, and a general description."
+                                className="min-h-[150px]"
+                                value={aiContent}
+                                onChange={(e) => setAiContent(e.target.value)}
+                                disabled={isGenerating}
+                            />
+                            <Button onClick={handleGenerate} disabled={isGenerating}>
+                                {isGenerating ? <Loader2 className="mr-2 animate-spin"/> : <Sparkles className="mr-2" />}
+                                Generate & Fill Form
+                            </Button>
+                         </CardContent>
+                     </Card>
+                  </div>
+
+
                   {/* Property Details Form */}
                   <div className="p-6 border-b">
                      <Card>
@@ -384,11 +516,11 @@ export default function PropertyEditPage() {
                          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                               <div className="space-y-2">
                                   <Label htmlFor="title">Title</Label>
-                                  <Input id="title" name="title" value={property.title} onChange={handleInputChange} />
+                                  <Input id="title" name="title" value={property.title || ''} onChange={handleInputChange} />
                               </div>
                                <div className="space-y-2">
                                   <Label htmlFor="location">Location</Label>
-                                  <Input id="location" name="location" value={property.location} onChange={handleInputChange} />
+                                  <Input id="location" name="location" value={property.location || ''} onChange={handleInputChange} />
                               </div>
                               <div className="space-y-2">
                                   <Label htmlFor="price">Price (per month)</Label>
@@ -396,7 +528,7 @@ export default function PropertyEditPage() {
                               </div>
                                <div className="space-y-2">
                                   <Label htmlFor="type">Type</Label>
-                                  <Input id="type" name="type" value={property.type} onChange={handleInputChange} />
+                                  <Input id="type" name="type" value={property.type || ''} onChange={handleInputChange} />
                               </div>
                                <div className="space-y-2">
                                   <Label htmlFor="bedrooms">Bedrooms</Label>
@@ -406,7 +538,7 @@ export default function PropertyEditPage() {
                                   <Label htmlFor="bathrooms">Bathrooms</Label>
                                   <Input id="bathrooms" name="bathrooms" type="number" value={property.bathrooms || 0} onChange={handleInputChange} />
                               </div>
-                              <div className="space-y-2">
+                              <div className="space-y-2 md:col-span-2">
                                   <Label htmlFor="area">Area (sqft)</Label>
                                   <Input id="area" name="area" type="number" value={property.area || 0} onChange={handleInputChange} />
                               </div>

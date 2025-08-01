@@ -28,7 +28,8 @@ export interface ButtonComponent extends BaseComponent {
 
 export interface TableComponent extends BaseComponent {
   type: 'Table';
-  data: string; // JSON string for rows
+  headers: string[];
+  rows: string[][];
 }
 
 export type BuilderComponent = TextComponent | ButtonComponent | TableComponent;
@@ -45,11 +46,9 @@ export const componentToHtml = (components: BuilderComponent[]): string => {
                 return `<button style="background-color: #6d28d9; color: white; padding: 0.5rem 1rem; border: none; border-radius: 0.25rem; cursor: pointer;">${component.text}</button>`;
             case 'Table':
                  try {
-                    const tableData: { [key: string]: string }[] = JSON.parse(component.data);
-                    if (!Array.isArray(tableData) || tableData.length === 0) return '<table></table>';
-                    const headers = Object.keys(tableData[0]);
-                    const headerHtml = `<thead><tr>${headers.map(h => `<th style="padding: 8px; border: 1px solid #ddd; text-align: left;">${h}</th>`).join('')}</tr></thead>`;
-                    const bodyHtml = `<tbody>${tableData.map(row => `<tr>${headers.map(h => `<td style="padding: 8px; border: 1px solid #ddd;">${row[h] || ''}</td>`).join('')}</tr>`).join('')}</tbody>`;
+                    if (!Array.isArray(component.headers) || !Array.isArray(component.rows)) return '<div>Invalid table data</div>';
+                    const headerHtml = `<thead><tr>${component.headers.map(h => `<th style="padding: 8px; border: 1px solid #ddd; text-align: left;">${h}</th>`).join('')}</tr></thead>`;
+                    const bodyHtml = `<tbody>${component.rows.map(row => `<tr>${row.map(cell => `<td style="padding: 8px; border: 1px solid #ddd;">${cell || ''}</td>`).join('')}</tr>`).join('')}</tbody>`;
                     return `<table style="width: 100%; border-collapse: collapse; margin: 1rem 0;">${headerHtml}${bodyHtml}</table>`;
                 } catch (e) {
                     return '<div>Invalid table data</div>';
@@ -111,13 +110,9 @@ export const generateInitialComponents = (html: string): BuilderComponent[] => {
             const table = node as HTMLTableElement;
             const headers = Array.from(table.querySelectorAll('th')).map(th => th.innerText);
             const rows = Array.from(table.querySelectorAll('tbody tr')).map(tr => {
-                const row: { [key: string]: string } = {};
-                Array.from(tr.querySelectorAll('td')).forEach((td, i) => {
-                    row[headers[i]] = td.innerText;
-                });
-                return row;
+                return Array.from(tr.querySelectorAll('td')).map(td => td.innerText);
             });
-            components.push({ id: uuidv4(), type: 'Table', data: JSON.stringify(rows, null, 2) });
+            components.push({ id: uuidv4(), type: 'Table', headers, rows });
         }
     });
     return components.length > 0 ? components : [
