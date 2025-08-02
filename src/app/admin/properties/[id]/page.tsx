@@ -554,8 +554,8 @@ export default function PropertyEditPage() {
       location: '',
       price: 0,
       type: 'Apartment',
-      bedrooms: 1,
-      bathrooms: 1,
+      bedrooms: 0,
+      bathrooms: 0,
       area: 0,
       images: ['https://placehold.co/600x400.png'],
       description: '',
@@ -565,6 +565,7 @@ export default function PropertyEditPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(!isNew);
   const [descriptionMode, setDescriptionMode] = useState<'builder' | 'json'>('builder');
+  const [showBedsBaths, setShowBedsBaths] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor));
 
   useEffect(() => {
@@ -578,6 +579,9 @@ export default function PropertyEditPage() {
             bathrooms: existingProperty.bathrooms ?? 0,
             area: existingProperty.area ?? 0,
           });
+          if (existingProperty.bedrooms > 0 || existingProperty.bathrooms > 0) {
+            setShowBedsBaths(true);
+          }
           const initialComponents = parseDescription(existingProperty.description || '');
           setComponents(initialComponents);
         } else {
@@ -751,6 +755,13 @@ export default function PropertyEditPage() {
     }
   }
 
+  const handleBedsBathsToggle = (checked: boolean) => {
+    setShowBedsBaths(checked);
+    if (!checked) {
+      setProperty(prev => ({ ...prev, bedrooms: 0, bathrooms: 0 }));
+    }
+  }
+
   const activeComponentType = activeId && activeId.toString().startsWith('toolbox-') ? activeId.toString().split('-')[1] as BuilderComponent['type'] : null;
   
   if (loading && !isNew) {
@@ -773,7 +784,15 @@ export default function PropertyEditPage() {
               <div className="flex flex-col overflow-y-auto">
                   <div className="p-6 border-b">
                      <Card>
-                         <CardHeader><CardTitle>Property Details</CardTitle></CardHeader>
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <CardTitle>Property Details</CardTitle>
+                                <div className="flex items-center space-x-2">
+                                    <Switch id="show-beds-baths" checked={showBedsBaths} onCheckedChange={handleBedsBathsToggle} />
+                                    <Label htmlFor="show-beds-baths">Show Bed/Bath</Label>
+                                </div>
+                            </div>
+                        </CardHeader>
                          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                               <div className="space-y-2">
                                   <Label htmlFor="title">Title</Label>
@@ -791,15 +810,21 @@ export default function PropertyEditPage() {
                                   <Label htmlFor="type">Type</Label>
                                   <Input id="type" name="type" value={property.type || ''} onChange={handleInputChange} />
                               </div>
-                               <div className="space-y-2">
-                                  <Label htmlFor="bedrooms">Bedrooms</Label>
-                                  <Input id="bedrooms" name="bedrooms" type="number" value={property.bedrooms || 0} onChange={handleInputChange} />
-                              </div>
-                               <div className="space-y-2">
-                                  <Label htmlFor="bathrooms">Bathrooms</Label>
-                                  <Input id="bathrooms" name="bathrooms" type="number" value={property.bathrooms || 0} onChange={handleInputChange} />
-                              </div>
-                              <div className="space-y-2 md:col-span-2">
+                              
+                              {showBedsBaths && (
+                                <>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="bedrooms">Bedrooms</Label>
+                                        <Input id="bedrooms" name="bedrooms" type="number" value={property.bedrooms || 0} onChange={handleInputChange} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="bathrooms">Bathrooms</Label>
+                                        <Input id="bathrooms" name="bathrooms" type="number" value={property.bathrooms || 0} onChange={handleInputChange} />
+                                    </div>
+                                </>
+                              )}
+
+                              <div className={cn("space-y-2", showBedsBaths ? "md:col-span-2" : "")}>
                                   <Label htmlFor="area">Area (sqft)</Label>
                                   <Input id="area" name="area" type="number" value={property.area || 0} onChange={handleInputChange} />
                               </div>
@@ -867,5 +892,3 @@ export default function PropertyEditPage() {
     </ClientOnly>
   );
 }
-
-    
