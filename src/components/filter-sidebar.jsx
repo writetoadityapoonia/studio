@@ -12,6 +12,7 @@ import { formatCurrency } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 import { SlidersHorizontal } from 'lucide-react';
 import { useDebounce } from '@/hooks/use-debounce';
+import { Input } from './ui/input';
 
 const PRICE_RANGE = {
   min: 0,
@@ -97,6 +98,14 @@ export function FilterSidebar({ propertyTypes }) {
     setFilters(prev => ({ ...prev, type: value === 'all' ? '' : value }));
   };
 
+  const handlePriceInputChange = (field, value) => {
+    const parsedValue = parseInt(value, 10);
+    if (!isNaN(parsedValue)) {
+      setFilters(prev => ({ ...prev, [field]: parsedValue }));
+    }
+  };
+
+
   const handlePriceChange = (value) => {
     setFilters(prev => ({ ...prev, minPrice: value[0], maxPrice: value[1] }));
   };
@@ -134,8 +143,34 @@ export function FilterSidebar({ propertyTypes }) {
           </Select>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-4">
           <Label>Price Range</Label>
+          <div className="flex gap-2">
+             <div className="space-y-1">
+                <Label htmlFor="min-price" className="text-xs text-muted-foreground">Min Price</Label>
+                <Input
+                    id="min-price"
+                    type="number"
+                    value={filters.minPrice}
+                    onChange={(e) => handlePriceInputChange('minPrice', e.target.value)}
+                    step={PRICE_RANGE.step}
+                    min={PRICE_RANGE.min}
+                    max={PRICE_RANGE.max}
+                />
+             </div>
+             <div className="space-y-1">
+                <Label htmlFor="max-price" className="text-xs text-muted-foreground">Max Price</Label>
+                <Input
+                    id="max-price"
+                    type="number"
+                    value={filters.maxPrice}
+                    onChange={(e) => handlePriceInputChange('maxPrice', e.target.value)}
+                    step={PRICE_RANGE.step}
+                    min={PRICE_RANGE.min}
+                    max={PRICE_RANGE.max}
+                />
+             </div>
+          </div>
           <Slider
             value={[filters.minPrice, filters.maxPrice]}
             onValueChange={handlePriceChange}
