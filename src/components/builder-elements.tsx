@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useDraggable } from '@dnd-kit/core';
@@ -36,59 +37,27 @@ export type BuilderComponent = TextComponent | ButtonComponent | TableComponent;
 
 
 // --- Helper Functions ---
-export const componentToHtml = (components: BuilderComponent[]): string => {
-    const bodyContent = components.map(component => {
-        switch (component.type) {
-            case 'Text':
-                const fontSizeMap = { sm: '0.875rem', md: '1rem', lg: '1.25rem', xl: '1.5rem' };
-                return `<p style="font-size: ${fontSizeMap[component.size]}; margin: 0.5rem 0;">${component.text}</p>`;
-            case 'Button':
-                return `<button style="background-color: #6d28d9; color: white; padding: 0.5rem 1rem; border: none; border-radius: 0.25rem; cursor: pointer;">${component.text}</button>`;
-            case 'Table':
-                 try {
-                    if (!Array.isArray(component.headers) || !Array.isArray(component.rows)) return '<div>Invalid table data</div>';
-                    const headerHtml = `<thead><tr>${component.headers.map(h => `<th style="padding: 8px; border: 1px solid #ddd; text-align: left;">${h}</th>`).join('')}</tr></thead>`;
-                    const bodyHtml = `<tbody>${component.rows.map(row => `<tr>${row.map(cell => `<td style="padding: 8px; border: 1px solid #ddd;">${cell || ''}</td>`).join('')}</tr>`).join('')}</tbody>`;
-                    return `<table style="width: 100%; border-collapse: collapse; margin: 1rem 0;">${headerHtml}${bodyHtml}</table>`;
-                } catch (e) {
-                    return '<div>Invalid table data</div>';
-                }
-            default:
-                return '';
+// A simple parser to regenerate builder components from a JSON string
+export const parseDescription = (description: string): BuilderComponent[] => {
+    try {
+        const components = JSON.parse(description);
+        if (Array.isArray(components)) {
+            // Basic validation, could be improved with Zod
+            return components.filter(c => c.id && c.type);
         }
-    }).join('\n');
-    
+    } catch (e) {
+        // Fallback for malformed JSON or old HTML content
+        return generateInitialComponentsFromHtml(description);
+    }
 
-    return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Property Description</title>
-    <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            line-height: 1.6;
-            background-color: transparent;
-            color: hsl(var(--foreground));
-            margin: 0;
-            padding: 0.1rem; /* Add tiny padding to help with height calculation */
-        }
-        p, div, table { margin: 1rem 0; }
-    </style>
-</head>
-<body>
-    ${bodyContent}
-</body>
-</html>
-    `;
+    return [
+        { id: uuidv4(), type: 'Text', text: 'Start building your description here.', size: 'md' },
+    ];
 };
 
-
-// A simple parser to regenerate builder components from saved HTML
+// Fallback to generate components from saved HTML for backward compatibility
 // This is basic and would need to be more robust for a real application
-export const generateInitialComponents = (html: string): BuilderComponent[] => {
+export const generateInitialComponentsFromHtml = (html: string): BuilderComponent[] => {
     if (!html || typeof document === 'undefined') {
         return [
             { id: uuidv4(), type: 'Text', text: 'Welcome to your new property! Edit this description.', size: 'md' },

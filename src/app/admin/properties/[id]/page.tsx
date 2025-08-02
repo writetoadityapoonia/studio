@@ -18,7 +18,7 @@ import { createProperty, updateProperty } from '@/lib/actions';
 import { getPropertyById } from '@/lib/data';
 import type { Property } from '@/lib/types';
 import { useRouter, useParams } from 'next/navigation';
-import { Toolbox, BuilderComponent, componentToHtml, generateInitialComponents, TextSize, TableComponent } from '@/components/builder-elements';
+import { Toolbox, BuilderComponent, generateInitialComponentsFromHtml, TextSize, TableComponent, parseDescription } from '@/components/builder-elements';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ClientOnly } from '@/components/client-only';
 import { Switch } from '@/components/ui/switch';
@@ -369,7 +369,7 @@ export default function PropertyEditPage() {
             bathrooms: existingProperty.bathrooms ?? 0,
             area: existingProperty.area ?? 0,
           });
-          const initialComponents = generateInitialComponents(existingProperty.description || '');
+          const initialComponents = parseDescription(existingProperty.description || '');
           setComponents(initialComponents);
         } else {
           toast({ title: "Property not found", variant: "destructive" });
@@ -378,9 +378,9 @@ export default function PropertyEditPage() {
         setLoading(false);
       });
     } else {
-        const initialComponents = generateInitialComponents('');
+        const initialComponents = parseDescription('');
         setComponents(initialComponents);
-        setProperty(prev => ({...prev, description: componentToHtml(initialComponents)}));
+        setProperty(prev => ({...prev, description: JSON.stringify(initialComponents)}));
     }
   }, [id, isNew, router, toast]);
 
@@ -389,7 +389,7 @@ export default function PropertyEditPage() {
   const handleUpdateComponent = (id: string, newProps: Partial<BuilderComponent>) => {
     setComponents(prev => {
         const newComponents = prev.map(c => c.id === id ? { ...c, ...newProps } : c);
-        setProperty(p => ({...p, description: componentToHtml(newComponents)}));
+        setProperty(p => ({...p, description: JSON.stringify(newComponents)}));
         return newComponents;
     });
   };
@@ -426,7 +426,7 @@ export default function PropertyEditPage() {
              newItems.push(newComponent);
         }
         setComponents(newItems);
-        setProperty(p => ({...p, description: componentToHtml(newItems)}));
+        setProperty(p => ({...p, description: JSON.stringify(newItems)}));
         setSelectedComponentId(newComponent.id);
         return;
     }
@@ -437,15 +437,21 @@ export default function PropertyEditPage() {
             const newIndex = items.findIndex(item => item.id === over.id);
             if (oldIndex === -1 || newIndex === -1) return items;
             const newItems = arrayMove(items, oldIndex, newIndex);
-            setProperty(p => ({...p, description: componentToHtml(newItems)}));
+            setProperty(p => ({...p, description: JSON.stringify(newItems)}));
             return newItems;
         });
     }
   };
   
   const handleSave = async () => {
-    // Description is already synced in property state
-    const propertyData = { ...property };
+    let descriptionToSave = property.description;
+    
+    // Ensure description is valid JSON before saving
+    if (descriptionMode === 'builder') {
+        descriptionToSave = JSON.stringify(components);
+    }
+
+    const propertyData = { ...property, description: descriptionToSave };
 
     try {
         if (isNew) {
@@ -458,9 +464,10 @@ export default function PropertyEditPage() {
         router.push('/admin');
         router.refresh(); 
     } catch (error) {
+        console.error("Save error:", error);
         toast({
             title: "Error Saving Property",
-            description: "There was an error saving the property details.",
+            description: "There was an error saving the property details. Check console for details.",
             variant: "destructive",
         });
     }
@@ -479,9 +486,12 @@ export default function PropertyEditPage() {
   const handleDescriptionModeChange = (checked: boolean) => {
     const newMode = checked ? 'html' : 'builder';
     if (newMode === 'html') {
-      setProperty(p => ({...p, description: componentToHtml(components)}));
+      // Switching to HTML mode, we just keep the current JSON string.
+      // The user is now responsible for the raw JSON content.
+      setProperty(p => ({...p, description: JSON.stringify(components, null, 2)}));
     } else {
-      setComponents(generateInitialComponents(property.description || ''));
+      // Switching back to builder, parse the text area content
+      setComponents(parseDescription(property.description || ''));
     }
     setDescriptionMode(newMode);
   };
@@ -551,7 +561,7 @@ export default function PropertyEditPage() {
                             </Label>
                             <Switch id="description-mode" checked={descriptionMode === 'html'} onCheckedChange={handleDescriptionModeChange} />
                             <Label htmlFor="description-mode" className="flex items-center gap-2 text-sm">
-                                <Code className="w-4 h-4"/> HTML
+                                <Code className="w-4 h-4"/> Raw JSON
                             </Label>
                         </div>
                       </div>
@@ -565,9 +575,20 @@ export default function PropertyEditPage() {
                         <Textarea 
                             name="description"
                             value={property.description || ''}
-                            onChange={handleInputChange}
+                            onChange={(e) => {
+                                handleInputChange(e);
+                                try {
+                                    // Also try to update builder components in real-time
+                                    const parsed = JSON.parse(e.target.value);
+                                    if (Array.isArray(parsed)) {
+                                        setComponents(parsed);
+                                    }
+                                } catch (error) {
+                                    // Ignore parse errors while typing
+                                }
+                            }}
                             className="w-full flex-grow min-h-[500px] font-code"
-                            placeholder="Enter property description HTML here..."
+                            placeholder="Enter property description as a JSON array here..."
                         />
                       )}
                   </div>
@@ -579,10 +600,10 @@ export default function PropertyEditPage() {
                   ) : (
                      <Card className="w-full h-full">
                         <CardHeader>
-                            <CardTitle>HTML Mode</CardTitle>
+                            <CardTitle>Raw JSON Mode</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-muted-foreground">You are in HTML mode. Edit the raw HTML content directly in the main panel.</p>
+                            <p className="text-muted-foreground">You are in raw JSON mode. Edit the JSON array directly in the main panel. Ensure the format is correct before saving.</p>
                         </CardContent>
                      </Card>
                   )}
@@ -604,5 +625,3 @@ export default function PropertyEditPage() {
     </ClientOnly>
   );
 }
-
-    
