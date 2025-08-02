@@ -1,3 +1,4 @@
+
 import { getPropertyById } from '@/lib/data';
 import { notFound } from 'next/navigation';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
