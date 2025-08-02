@@ -6,7 +6,7 @@ import { DndContext, DragEndEvent, DragOverlay, useDroppable, PointerSensor, use
 import { SortableContext, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { v4 as uuidv4 } from 'uuid';
-import { Plus, Trash2, Type, RectangleHorizontal, Save, GripVertical, TableIcon, Code, Blocks, Image as ImageIcon, Minus, Divide } from 'lucide-react';
+import { Plus, Trash2, Type, RectangleHorizontal, Save, GripVertical, TableIcon, Code, Blocks, Image as ImageIcon, Minus, Divide, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,8 @@ import Image from 'next/image';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { AlignLeft, AlignCenter, AlignRight, Bold, Italic } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { generateDescription } from '@/ai/flows/generate-description-flow';
 
 
 function SortableItem({ id, children }: { id: string; children: React.ReactNode }) {
@@ -463,6 +465,55 @@ const PropertiesPanel = ({ selectedComponent, onUpdate }: { selectedComponent: B
   );
 };
 
+const GenerateDescriptionDialog = ({ onGenerate }: { onGenerate: (components: BuilderComponent[]) => void }) => {
+    const [rawText, setRawText] = useState('');
+    const [isGenerating, setIsGenerating] = useState(false);
+    const { toast } = useToast();
+
+    const handleGenerate = async () => {
+        if (!rawText.trim()) {
+            toast({ title: 'Input Required', description: 'Please paste some text to generate a description.', variant: 'destructive' });
+            return;
+        }
+        setIsGenerating(true);
+        try {
+            const result = await generateDescription(rawText);
+            onGenerate(result.components);
+        } catch (error) {
+            console.error("AI Generation Error:", error);
+            toast({ title: 'Generation Failed', description: 'Could not generate description from the provided text.', variant: 'destructive' });
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    return (
+        <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+                <DialogTitle>Generate Description with AI</DialogTitle>
+                <DialogDescription>
+                    Paste your raw property details below. The AI will parse it and structure it into components for the builder.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+                <Textarea
+                    id="raw-text"
+                    placeholder="Paste your property details here..."
+                    className="min-h-[250px]"
+                    value={rawText}
+                    onChange={(e) => setRawText(e.target.value)}
+                    disabled={isGenerating}
+                />
+            </div>
+            <DialogFooter>
+                <Button onClick={handleGenerate} disabled={isGenerating}>
+                    {isGenerating ? 'Generating...' : 'Generate'}
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    )
+}
+
 export default function PropertyEditPage() {
   const router = useRouter();
   const params = useParams();
@@ -626,10 +677,22 @@ export default function PropertyEditPage() {
     if (newMode === 'json') {
       setProperty(p => ({...p, description: JSON.stringify(components, null, 2)}));
     } else {
-      setComponents(parseDescription(property.description || '[]'));
+      try {
+        setComponents(parseDescription(property.description || '[]'));
+      } catch (e) {
+        toast({ title: "Invalid JSON", description: "Could not parse JSON, staying in raw mode.", variant: 'destructive' });
+        setDescriptionMode('json');
+        return;
+      }
     }
     setDescriptionMode(newMode);
   };
+  
+  const handleAiGenerate = (generatedComponents: BuilderComponent[]) => {
+      setComponents(generatedComponents);
+      setProperty(p => ({...p, description: JSON.stringify(generatedComponents)}));
+      toast({title: 'Description Generated!', description: 'The AI has structured your content.'});
+  }
 
   const activeComponentType = activeId && activeId.toString().startsWith('toolbox-') ? activeId.toString().split('-')[1] as BuilderComponent['type'] : null;
   
@@ -689,7 +752,18 @@ export default function PropertyEditPage() {
 
                    <div className="p-6 flex-grow flex flex-col">
                       <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold">Property Description</h2>
+                         <div className="flex items-center gap-4">
+                            <h2 className="text-xl font-bold">Property Description</h2>
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                     <Button variant="outline" size="sm">
+                                        <Sparkles className="mr-2 h-4 w-4" />
+                                        Generate with AI
+                                    </Button>
+                                </DialogTrigger>
+                                <GenerateDescriptionDialog onGenerate={handleAiGenerate} />
+                            </Dialog>
+                         </div>
                         <div className="flex items-center space-x-2">
                             <Label htmlFor="description-mode" className="flex items-center gap-2 text-sm">
                                 <Blocks className="w-4 h-4"/> Builder
@@ -712,13 +786,6 @@ export default function PropertyEditPage() {
                             value={property.description || ''}
                             onChange={(e) => {
                                 handleInputChange(e);
-                                try {
-                                    const parsed = JSON.parse(e.target.value);
-                                    if (Array.isArray(parsed)) {
-                                        setComponents(parsed);
-                                    }
-                                } catch (error) {
-                                }
                             }}
                             className="w-full flex-grow min-h-[500px] font-code"
                             placeholder="Enter property description as a JSON array here..."
