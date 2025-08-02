@@ -77,12 +77,13 @@
 
 /* Custom styles for Google Maps Autocomplete */
 .pac-container {
-  @apply rounded-md border-border bg-popover text-popover-foreground shadow-md;
+  @apply rounded-md border-border bg-card text-card-foreground shadow-lg;
   z-index: 9999 !important; /* Ensure it appears above other elements */
+  margin-top: 4px;
 }
 
 .pac-item {
-  @apply cursor-pointer px-4 py-2 text-sm text-popover-foreground;
+  @apply cursor-pointer px-4 py-2 text-sm text-card-foreground;
   border-bottom: 1px solid hsl(var(--border));
 }
 
@@ -91,11 +92,11 @@
 }
 
 .pac-item:hover {
-  background-color: hsl(var(--secondary));
+  background-color: hsl(var(--muted));
 }
 
 .pac-item-query {
-  @apply font-bold;
+  @apply font-bold text-foreground;
 }
 
 .pac-icon {
