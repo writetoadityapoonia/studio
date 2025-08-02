@@ -58,26 +58,6 @@ export const componentToHtml = (components: BuilderComponent[]): string => {
         }
     }).join('\n');
     
-    const resizeScript = `
-        <script>
-            function sendHeight() {
-                // Use offsetHeight for a more reliable measurement
-                const height = document.body.offsetHeight;
-                window.parent.postMessage({ type: 'iframe-resize', height: height }, '*');
-            }
-
-            // Send height on initial load
-            window.addEventListener('load', sendHeight);
-
-            // Also send height on mutations
-            const observer = new MutationObserver(sendHeight);
-            observer.observe(document.body, {
-                attributes: true,
-                childList: true,
-                subtree: true,
-            });
-        </script>
-    `;
 
     return `
 <!DOCTYPE html>
@@ -100,7 +80,6 @@ export const componentToHtml = (components: BuilderComponent[]): string => {
 </head>
 <body>
     ${bodyContent}
-    ${resizeScript}
 </body>
 </html>
     `;

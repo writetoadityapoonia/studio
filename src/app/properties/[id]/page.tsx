@@ -4,7 +4,6 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Bath, BedDouble, Ruler, MapPin } from 'lucide-react';
-import { DynamicIframe } from '@/components/dynamic-iframe';
 
 export default async function PropertyPage({ params }: { params: { id: string } }) {
   const property = await getPropertyById(params.id);
@@ -42,12 +41,10 @@ export default async function PropertyPage({ params }: { params: { id: string } 
             <span>{property.location}</span>
           </div>
 
-          <div className="bg-background rounded-lg">
-            {/* The iframe will securely render the HTML from the page builder */}
-            <DynamicIframe
-              srcDoc={property.description}
-              title="Property Description"
-            />
+          <div 
+            className="bg-background rounded-lg"
+            dangerouslySetInnerHTML={{ __html: property.description }}
+          >
           </div>
         </div>
         
