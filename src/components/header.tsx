@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet';
 import { Menu } from 'lucide-react';
 import { Logo } from './logo';
+import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
 
 export function Header() {
   return (
@@ -35,6 +36,16 @@ export function Header() {
              <Link href="/" className="font-medium text-foreground/60 transition-colors hover:text-foreground/80">Home</Link>
              <Link href="/admin" className="font-medium text-foreground/60 transition-colors hover:text-foreground/80">Admin</Link>
           </nav>
+           <div className="flex items-center gap-4">
+            <SignedOut>
+              <Button asChild>
+                <Link href="/sign-in">Sign In</Link>
+              </Button>
+            </SignedOut>
+            <SignedIn>
+              <UserButton />
+            </SignedIn>
+          </div>
         </div>
       </div>
     </header>
