@@ -56,20 +56,24 @@ export default async function PropertyPage({ params }: { params: { id: string } 
                 <h2 className="text-3xl font-bold text-primary mb-4">{formatCurrency(property.price, 'INR')}</h2>
                 
                 <div className="grid grid-cols-2 gap-4 text-lg mb-6">
-                    <div className="flex items-center gap-2">
-                        <BedDouble className="w-6 h-6 text-primary"/>
-                        <div>
-                            <p className="font-bold">{property.bedrooms}</p>
-                            <p className="text-sm text-muted-foreground">Beds</p>
+                    {property.bedrooms > 0 && (
+                        <div className="flex items-center gap-2">
+                            <BedDouble className="w-6 h-6 text-primary"/>
+                            <div>
+                                <p className="font-bold">{property.bedrooms}</p>
+                                <p className="text-sm text-muted-foreground">Beds</p>
+                            </div>
                         </div>
-                    </div>
-                     <div className="flex items-center gap-2">
-                        <Bath className="w-6 h-6 text-primary"/>
-                         <div>
-                            <p className="font-bold">{property.bathrooms}</p>
-                            <p className="text-sm text-muted-foreground">Baths</p>
+                    )}
+                     {property.bathrooms > 0 && (
+                        <div className="flex items-center gap-2">
+                            <Bath className="w-6 h-6 text-primary"/>
+                            <div>
+                                <p className="font-bold">{property.bathrooms}</p>
+                                <p className="text-sm text-muted-foreground">Baths</p>
+                            </div>
                         </div>
-                    </div>
+                    )}
                      <div className="flex items-center gap-2">
                         <Ruler className="w-6 h-6 text-primary"/>
                          <div>

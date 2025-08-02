@@ -31,14 +31,18 @@ export function PropertyCard({ property }: PropertyCardProps) {
         </CardContent>
         <CardFooter className="p-4 pt-0 flex justify-between items-center text-sm">
            <div className="flex items-center gap-4 text-muted-foreground">
-             <div className="flex items-center gap-1">
-                <BedDouble className="w-4 h-4"/>
-                <span>{property.bedrooms}</span>
-             </div>
-             <div className="flex items-center gap-1">
-                <Bath className="w-4 h-4"/>
-                <span>{property.bathrooms}</span>
-             </div>
+             {property.bedrooms > 0 && (
+                <div className="flex items-center gap-1">
+                    <BedDouble className="w-4 h-4"/>
+                    <span>{property.bedrooms}</span>
+                </div>
+             )}
+             {property.bathrooms > 0 && (
+                <div className="flex items-center gap-1">
+                    <Bath className="w-4 h-4"/>
+                    <span>{property.bathrooms}</span>
+                </div>
+             )}
               <div className="flex items-center gap-1">
                 <Ruler className="w-4 h-4"/>
                 <span>{property.area} sqft</span>
