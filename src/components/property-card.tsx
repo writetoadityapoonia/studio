@@ -4,6 +4,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Badge } from '@/components/ui/badge';
 import { Bath, BedDouble, Ruler } from 'lucide-react';
 import type { Property } from '@/lib/types';
+import { formatCurrency } from '@/lib/utils';
 
 interface PropertyCardProps {
   property: Property;
@@ -12,7 +13,7 @@ interface PropertyCardProps {
 export function PropertyCard({ property }: PropertyCardProps) {
   return (
     <Link href={`/properties/${property.id}`}>
-      <Card className="overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1">
+      <Card className="overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1 bg-card border-border">
         <CardHeader className="p-0">
           <Image
             src={property.images[0]}
@@ -43,7 +44,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
                 <span>{property.area} sqft</span>
              </div>
            </div>
-           <p className="text-lg font-bold text-primary">${property.price.toLocaleString()}/mo</p>
+           <p className="text-lg font-bold text-primary">{formatCurrency(property.price, 'INR')}</p>
         </CardFooter>
       </Card>
     </Link>

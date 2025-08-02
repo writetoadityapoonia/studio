@@ -784,7 +784,7 @@ export default function PropertyEditPage() {
                                   <Input id="location" name="location" value={property.location || ''} onChange={handleInputChange} />
                               </div>
                               <div className="space-y-2">
-                                  <Label htmlFor="price">Price (per month)</Label>
+                                  <Label htmlFor="price">Price (in INR)</Label>
                                   <Input id="price" name="price" type="number" value={property.price || 0} onChange={handleInputChange} />
                               </div>
                                <div className="space-y-2">

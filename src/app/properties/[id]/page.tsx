@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Bath, BedDouble, Ruler, MapPin } from 'lucide-react';
 import { DescriptionRenderer } from '@/components/description-renderer';
+import { formatCurrency } from '@/lib/utils';
 
 
 export default async function PropertyPage({ params }: { params: { id: string } }) {
@@ -51,7 +52,7 @@ export default async function PropertyPage({ params }: { params: { id: string } 
         
         <div className="lg:col-span-1">
             <div className="sticky top-24 p-6 bg-card rounded-lg border">
-                <h2 className="text-3xl font-bold text-primary mb-4">${property.price.toLocaleString()}<span className="text-base font-normal text-muted-foreground">/month</span></h2>
+                <h2 className="text-3xl font-bold text-primary mb-4">{formatCurrency(property.price, 'INR')}</h2>
                 
                 <div className="grid grid-cols-2 gap-4 text-lg mb-6">
                     <div className="flex items-center gap-2">

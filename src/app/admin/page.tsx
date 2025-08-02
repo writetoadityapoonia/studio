@@ -11,6 +11,7 @@ import type { Property } from '@/lib/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { deleteProperty } from '@/lib/actions';
+import { formatCurrency } from '@/lib/utils';
 
 function DeleteConfirmation({ propertyId, onDeleted }: { propertyId: string, onDeleted: () => void }) {
     const { toast } = useToast();
@@ -106,7 +107,7 @@ export default function AdminDashboard() {
                                 <TableRow key={property.id}>
                                     <TableCell className="font-medium">{property.title}</TableCell>
                                     <TableCell>{property.location}</TableCell>
-                                    <TableCell>${property.price.toLocaleString()}</TableCell>
+                                    <TableCell>{formatCurrency(property.price, 'INR')}</TableCell>
                                     <TableCell className="text-right space-x-2">
                                         <Link href={`/admin/properties/${property.id}`}>
                                             <Button variant="outline" size="sm">

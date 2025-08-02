@@ -24,7 +24,8 @@ export function Header() {
                 <Logo />
                 <div className="my-4 h-[calc(100vh-8rem)] pb-10 pl-6">
                   <div className="flex flex-col space-y-3">
-                     <Link href="/" className="text-lg font-medium">Home</Link>
+                     <Link href="/home" className="text-lg font-medium">Home</Link>
+                     <Link href="/" className="text-lg font-medium">Properties</Link>
                      <Link href="/admin" className="text-lg font-medium">Admin</Link>
                   </div>
                 </div>
@@ -32,7 +33,8 @@ export function Header() {
             </Sheet>
           </div>
           <nav className="hidden items-center gap-6 text-sm md:flex">
-             <Link href="/" className="font-medium text-foreground/60 transition-colors hover:text-foreground/80">Home</Link>
+             <Link href="/home" className="font-medium text-foreground/60 transition-colors hover:text-foreground/80">Home</Link>
+             <Link href="/" className="font-medium text-foreground/60 transition-colors hover:text-foreground/80">Properties</Link>
              <Link href="/admin" className="font-medium text-foreground/60 transition-colors hover:text-foreground/80">Admin</Link>
           </nav>
         </div>
