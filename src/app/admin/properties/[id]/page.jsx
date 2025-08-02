@@ -543,15 +543,15 @@ const PropertiesPanel = ({ selectedComponent, onUpdate }) => {
 };
 
 
-const ImageSortableItem = ({ id, children }) => {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
+const ImageSortableItem = ({ id, children, listeners, attributes }) => {
+  const { setNodeRef, transform, transition } = useSortable({ id });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
   };
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="relative group">
-      {children}
+    <div ref={setNodeRef} style={style} {...attributes} className="relative group">
+       {React.cloneElement(children, { listeners })}
     </div>
   );
 };
@@ -561,7 +561,7 @@ function ImageGrid({ images, onRemove, onReorder }) {
 
     function handleDragEnd(event) {
         const { active, over } = event;
-        if (active.id !== over.id) {
+        if (over && active.id !== over.id) {
             const oldIndex = images.findIndex((img) => img === active.id);
             const newIndex = images.findIndex((img) => img === over.id);
             onReorder(oldIndex, newIndex);
@@ -573,30 +573,45 @@ function ImageGrid({ images, onRemove, onReorder }) {
             <SortableContext items={images} strategy={rectSortingStrategy}>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
                     {images.map((url) => (
-                        <ImageSortableItem key={url} id={url}>
-                            <div className="relative aspect-square w-full">
-                                <Image
-                                    src={url}
-                                    alt="Property image"
-                                    fill
-                                    className="object-cover rounded-md"
-                                />
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); onRemove(url); }}
-                                    className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-70 hover:opacity-100 transition-opacity"
-                                >
-                                    <Trash2 className="w-3 h-3" />
-                                </button>
-                                <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
-                                <GripVertical className="absolute bottom-1 right-1 text-white w-4 h-4 cursor-grab" />
-                            </div>
-                        </ImageSortableItem>
+                         <ImageSortableItemWrapper key={url} id={url} onRemove={() => onRemove(url)}>
+                            <Image
+                                src={url}
+                                alt="Property image"
+                                fill
+                                className="object-cover rounded-md"
+                            />
+                        </ImageSortableItemWrapper>
                     ))}
                 </div>
             </SortableContext>
         </DndContext>
     );
 }
+
+const ImageSortableItemWrapper = ({ id, onRemove, children }) => {
+    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+    };
+
+    return (
+        <div ref={setNodeRef} style={style} className="relative aspect-square w-full group">
+             {children}
+            <button
+                onClick={() => onRemove(id)}
+                className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+            >
+                <Trash2 className="w-3 h-3" />
+            </button>
+            <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+            <div {...attributes} {...listeners} className="absolute bottom-1 right-1 text-white w-4 h-4 cursor-grab z-10">
+                <GripVertical />
+            </div>
+        </div>
+    );
+};
+
 
 export default function PropertyEditPage() {
   const router = useRouter();
@@ -1025,3 +1040,5 @@ export default function PropertyEditPage() {
     </ClientOnly>
   );
 }
+
+    
