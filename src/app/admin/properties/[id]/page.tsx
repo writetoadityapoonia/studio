@@ -6,7 +6,7 @@ import { DndContext, DragEndEvent, DragOverlay, useDroppable, PointerSensor, use
 import { SortableContext, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { v4 as uuidv4 } from 'uuid';
-import { Plus, Trash2, Type, RectangleHorizontal, Save, GripVertical, TableIcon } from 'lucide-react';
+import { Plus, Trash2, Type, RectangleHorizontal, Save, GripVertical, TableIcon, Code } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,9 +18,10 @@ import { createProperty, updateProperty } from '@/lib/actions';
 import { getPropertyById } from '@/lib/data';
 import type { Property } from '@/lib/types';
 import { useRouter, useParams } from 'next/navigation';
-import { Toolbox, BuilderComponent, componentToHtml, generateInitialComponents, TextSize } from '@/components/builder-elements';
+import { Toolbox, BuilderComponent, componentToHtml, generateInitialComponents, TextSize, TableComponent } from '@/components/builder-elements';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ClientOnly } from '@/components/client-only';
+import { Switch } from '@/components/ui/switch';
 
 
 function SortableItem({ id, children }: { id: string; children: React.ReactNode }) {
@@ -132,6 +133,18 @@ const Canvas = ({ components, setComponents, selectedComponentId, setSelectedCom
 };
 
 const PropertiesPanel = ({ selectedComponent, onUpdate }: { selectedComponent: BuilderComponent | null; onUpdate: (id: string, newProps: Partial<BuilderComponent>) => void }) => {
+  const [tableJsonMode, setTableJsonMode] = useState(false);
+  const [jsonString, setJsonString] = useState('');
+  const [jsonError, setJsonError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (selectedComponent?.type === 'Table') {
+      setJsonString(JSON.stringify({ headers: selectedComponent.headers, rows: selectedComponent.rows }, null, 2));
+      setJsonError(null);
+    }
+  }, [selectedComponent]);
+
+
   if (!selectedComponent) {
     return (
       <Card className="w-full h-full">
@@ -144,6 +157,26 @@ const PropertiesPanel = ({ selectedComponent, onUpdate }: { selectedComponent: B
       </Card>
     );
   }
+
+  const handleJsonChange = (value: string) => {
+    setJsonString(value);
+    try {
+        const parsed = JSON.parse(value);
+        if (
+            !parsed ||
+            !Array.isArray(parsed.headers) ||
+            !Array.isArray(parsed.rows) ||
+            parsed.rows.some((r: any) => !Array.isArray(r))
+        ) {
+            throw new Error('Invalid JSON structure. Must have "headers" and "rows" arrays.');
+        }
+        onUpdate(selectedComponent.id, { headers: parsed.headers, rows: parsed.rows });
+        setJsonError(null);
+    } catch (error: any) {
+        setJsonError(error.message);
+    }
+  };
+
 
     const handleTableChange = (rowIndex: number, colIndex: number, value: string) => {
         if (selectedComponent.type !== 'Table') return;
@@ -234,33 +267,53 @@ const PropertiesPanel = ({ selectedComponent, onUpdate }: { selectedComponent: B
        case 'Table':
         return (
             <div className="space-y-4">
-                <div className="space-y-2">
-                    <Label>Table Content</Label>
-                    <div className="space-y-2 rounded-md border p-2">
-                         {selectedComponent.headers.map((header, colIndex) => (
-                             <div key={colIndex} className="flex items-center gap-2">
-                                <Input value={header} onChange={e => handleHeaderChange(colIndex, e.target.value)} placeholder={`Header ${colIndex + 1}`} className="font-bold"/>
-                                 <Button variant="ghost" size="icon" onClick={() => removeColumn(colIndex)} disabled={selectedComponent.headers.length <= 1}>
-                                    <Trash2 className="w-4 h-4 text-destructive"/>
-                                </Button>
-                             </div>
-                         ))}
-                        {selectedComponent.rows.map((row, rowIndex) => (
-                            <div key={rowIndex} className="flex items-center gap-2">
-                                {row.map((cell, colIndex) => (
-                                     <Input key={colIndex} value={cell} onChange={(e) => handleTableChange(rowIndex, colIndex, e.target.value)} />
-                                ))}
-                                <Button variant="ghost" size="icon" onClick={() => removeRow(rowIndex)}>
-                                    <Trash2 className="w-4 h-4 text-destructive"/>
-                                </Button>
-                            </div>
-                        ))}
+                 <div className="flex items-center space-x-2">
+                    <Switch id="json-mode" checked={tableJsonMode} onCheckedChange={setTableJsonMode} />
+                    <Label htmlFor="json-mode" className="flex items-center gap-2"><Code className="w-4 h-4"/> JSON Mode</Label>
+                </div>
+
+                {tableJsonMode ? (
+                     <div>
+                        <Label htmlFor="json-editor">JSON Data</Label>
+                        <Textarea
+                            id="json-editor"
+                            value={jsonString}
+                            onChange={(e) => handleJsonChange(e.target.value)}
+                            className={cn('min-h-[200px] font-code', { 'border-destructive': jsonError })}
+                        />
+                         {jsonError && <p className="text-sm text-destructive mt-2">{jsonError}</p>}
                     </div>
-                </div>
-                 <div className="flex gap-2">
-                    <Button onClick={addRow} variant="outline" size="sm">Add Row</Button>
-                    <Button onClick={addColumn} variant="outline" size="sm">Add Column</Button>
-                </div>
+                ) : (
+                    <>
+                        <div className="space-y-2">
+                            <Label>Table Content</Label>
+                            <div className="space-y-2 rounded-md border p-2">
+                                {selectedComponent.headers.map((header, colIndex) => (
+                                    <div key={colIndex} className="flex items-center gap-2">
+                                        <Input value={header} onChange={e => handleHeaderChange(colIndex, e.target.value)} placeholder={`Header ${colIndex + 1}`} className="font-bold"/>
+                                        <Button variant="ghost" size="icon" onClick={() => removeColumn(colIndex)} disabled={selectedComponent.headers.length <= 1}>
+                                            <Trash2 className="w-4 h-4 text-destructive"/>
+                                        </Button>
+                                    </div>
+                                ))}
+                                {selectedComponent.rows.map((row, rowIndex) => (
+                                    <div key={rowIndex} className="flex items-center gap-2">
+                                        {row.map((cell, colIndex) => (
+                                            <Input key={colIndex} value={cell} onChange={(e) => handleTableChange(rowIndex, colIndex, e.target.value)} />
+                                        ))}
+                                        <Button variant="ghost" size="icon" onClick={() => removeRow(rowIndex)}>
+                                            <Trash2 className="w-4 h-4 text-destructive"/>
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button onClick={addRow} variant="outline" size="sm">Add Row</Button>
+                            <Button onClick={addColumn} variant="outline" size="sm">Add Column</Button>
+                        </div>
+                    </>
+                )}
             </div>
         )
       default:

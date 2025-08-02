@@ -5,7 +5,7 @@ export interface Property {
   price: number;
   type: string;
   bedrooms: number;
-  bathrooms: number | string;
+  bathrooms: number;
   area: number;
   images: string[];
   description: string;
