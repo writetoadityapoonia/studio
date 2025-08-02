@@ -59,14 +59,18 @@ export function PropertyCard({ property }) {
             </div>
 
             <div className="mt-4 pt-4 border-t grid grid-cols-2 gap-4 text-sm">
-                 <div className="flex items-center gap-2 text-muted-foreground">
-                    <BedDouble className="w-5 h-5 text-primary"/>
-                    <span>{property.bedrooms > 0 ? `${property.bedrooms} Beds` : 'N/A'}</span>
-                </div>
-                 <div className="flex items-center gap-2 text-muted-foreground">
-                    <Bath className="w-5 h-5 text-primary"/>
-                    <span>{property.bathrooms > 0 ? `${property.bathrooms} Baths` : 'N/A'}</span>
-                </div>
+                 {property.bedrooms > 0 && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                        <BedDouble className="w-5 h-5 text-primary"/>
+                        <span>{property.bedrooms} Beds</span>
+                    </div>
+                 )}
+                 {property.bathrooms > 0 && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                        <Bath className="w-5 h-5 text-primary"/>
+                        <span>{property.bathrooms} Baths</span>
+                    </div>
+                 )}
                  <div className="flex items-center gap-2 text-muted-foreground">
                     <Ruler className="w-5 h-5 text-primary"/>
                     <span>{property.area > 0 ? `${property.area} sqft` : 'N/A'}</span>
