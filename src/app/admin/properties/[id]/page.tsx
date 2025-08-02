@@ -6,7 +6,7 @@ import { DndContext, DragEndEvent, DragOverlay, useDroppable, PointerSensor, use
 import { SortableContext, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { v4 as uuidv4 } from 'uuid';
-import { Plus, Trash2, Type, RectangleHorizontal, Save, GripVertical, TableIcon, Code, Blocks } from 'lucide-react';
+import { Plus, Trash2, Type, RectangleHorizontal, Save, GripVertical, TableIcon, Code, Blocks, Image as ImageIcon, Minus, Divide } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,10 +18,14 @@ import { createProperty, updateProperty } from '@/lib/actions';
 import { getPropertyById } from '@/lib/data';
 import type { Property } from '@/lib/types';
 import { useRouter, useParams } from 'next/navigation';
-import { Toolbox, BuilderComponent, generateInitialComponentsFromHtml, TextSize, TableComponent, parseDescription } from '@/components/builder-elements';
+import { Toolbox, BuilderComponent, generateInitialComponentsFromHtml, TextSize, TableComponent, parseDescription, TextColor, TextStyle, ButtonVariant, ButtonSize, SpacerSize } from '@/components/builder-elements';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ClientOnly } from '@/components/client-only';
 import { Switch } from '@/components/ui/switch';
+import Image from 'next/image';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { AlignLeft, AlignCenter, AlignRight, Bold, Italic } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 
 
 function SortableItem({ id, children }: { id: string; children: React.ReactNode }) {
@@ -45,12 +49,29 @@ function SortableItem({ id, children }: { id: string; children: React.ReactNode 
 const CanvasComponent = ({ component, selected, onSelect, onDelete }: { component: BuilderComponent; selected: boolean; onSelect: () => void; onDelete: () => void; }) => {
   const renderComponent = () => {
     switch (component.type) {
-      case 'Text':
+      case 'Text': {
         const fontSizeMap = { sm: 'text-sm', md: 'text-base', lg: 'text-lg', xl: 'text-xl' };
-        return <p className={cn("py-2", fontSizeMap[component.size])}>{component.text}</p>;
-      case 'Button':
-        return <Button>{component.text}</Button>;
-       case 'Table':
+        const fontColorMap = { default: 'text-foreground', primary: 'text-primary', muted: 'text-muted-foreground' };
+        const textAlignMap = { left: 'text-left', center: 'text-center', right: 'text-right' };
+        return <p className={cn(
+            "py-2 w-full",
+            fontSizeMap[component.size],
+            fontColorMap[component.color],
+            textAlignMap[component.align],
+            { 'font-bold': component.style.includes('bold') },
+            { 'italic': component.style.includes('italic') },
+        )}>{component.text || "Empty Text"}</p>;
+      }
+      case 'Button': {
+          const buttonContent = (
+            <Button variant={component.variant} size={component.size}>{component.text}</Button>
+          );
+          if (component.href) {
+              return <a href={component.href} target="_blank" rel="noopener noreferrer">{buttonContent}</a>
+          }
+          return buttonContent;
+      }
+      case 'Table':
             if (!Array.isArray(component.headers) || !Array.isArray(component.rows)) {
                 return <p className="text-destructive">Invalid table data.</p>;
             }
@@ -74,6 +95,18 @@ const CanvasComponent = ({ component, selected, onSelect, onDelete }: { componen
                     </table>
                 </div>
             )
+       case 'Image':
+            return (
+                <div className="flex justify-center">
+                    <Image src={component.src || 'https://placehold.co/600x400.png'} alt={component.alt} width={600} height={400} className="rounded-md object-cover" data-ai-hint="property element" />
+                </div>
+            )
+       case 'Spacer': {
+           const sizeMap = { sm: 'h-4', md: 'h-8', lg: 'h-16' };
+            return <div className={cn("w-full", sizeMap[component.size])}></div>
+       }
+       case 'Divider':
+            return <Separator className="my-4" />
       default:
         return null;
     }
@@ -87,7 +120,7 @@ const CanvasComponent = ({ component, selected, onSelect, onDelete }: { componen
         { 'border-primary bg-primary/10': selected }
       )}
     >
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
             <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
                 <Trash2 className="w-4 h-4 text-destructive" />
             </Button>
@@ -234,35 +267,110 @@ const PropertiesPanel = ({ selectedComponent, onUpdate }: { selectedComponent: B
                 className="min-h-[100px]"
               />
             </div>
+             <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="size">Font Size</Label>
+                  <Select value={selectedComponent.size} onValueChange={(value: TextSize) => onUpdate(selectedComponent.id, { size: value })}>
+                      <SelectTrigger id="size"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="sm">Small</SelectItem>
+                          <SelectItem value="md">Medium</SelectItem>
+                          <SelectItem value="lg">Large</SelectItem>
+                          <SelectItem value="xl">Extra Large</SelectItem>
+                      </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="color">Color</Label>
+                   <Select value={selectedComponent.color} onValueChange={(value: TextColor) => onUpdate(selectedComponent.id, { color: value })}>
+                      <SelectTrigger id="color"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="default">Default</SelectItem>
+                          <SelectItem value="primary">Primary</SelectItem>
+                          <SelectItem value="muted">Muted</SelectItem>
+                      </SelectContent>
+                  </Select>
+                </div>
+             </div>
              <div>
-                <Label htmlFor="size">Font Size</Label>
-                <Select value={selectedComponent.size} onValueChange={(value: TextSize) => onUpdate(selectedComponent.id, { size: value })}>
-                    <SelectTrigger id="size">
-                        <SelectValue placeholder="Select size" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="sm">Small</SelectItem>
-                        <SelectItem value="md">Medium</SelectItem>
-                        <SelectItem value="lg">Large</SelectItem>
-                        <SelectItem value="xl">Extra Large</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
+                <Label>Alignment</Label>
+                <ToggleGroup type="single" value={selectedComponent.align} onValueChange={(value: 'left' | 'center' | 'right') => value && onUpdate(selectedComponent.id, { align: value })} className="w-full">
+                  <ToggleGroupItem value="left" aria-label="Align left" className="w-full"><AlignLeft className="h-4 w-4" /></ToggleGroupItem>
+                  <ToggleGroupItem value="center" aria-label="Align center" className="w-full"><AlignCenter className="h-4 w-4" /></ToggleGroupItem>
+                  <ToggleGroupItem value="right" aria-label="Align right" className="w-full"><AlignRight className="h-4 w-4" /></ToggleGroupItem>
+                </ToggleGroup>
+             </div>
+             <div>
+                <Label>Style</Label>
+                <ToggleGroup type="multiple" value={selectedComponent.style} onValueChange={(value: TextStyle[]) => onUpdate(selectedComponent.id, { style: value })} className="w-full">
+                  <ToggleGroupItem value="bold" aria-label="Bold" className="w-full"><Bold className="h-4 w-4" /></ToggleGroupItem>
+                  <ToggleGroupItem value="italic" aria-label="Italic" className="w-full"><Italic className="h-4 w-4" /></ToggleGroupItem>
+                </ToggleGroup>
+             </div>
           </div>
         );
       case 'Button':
         return (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="text">Text Content</Label>
-              <Textarea
+              <Label htmlFor="text">Button Text</Label>
+              <Input
                 id="text"
                 value={selectedComponent.text}
                 onChange={(e) => onUpdate(selectedComponent.id, { text: e.target.value })}
-                className="min-h-[100px]"
               />
             </div>
+            <div>
+              <Label htmlFor="href">Link URL</Label>
+              <Input
+                id="href"
+                placeholder="https://example.com"
+                value={selectedComponent.href}
+                onChange={(e) => onUpdate(selectedComponent.id, { href: e.target.value })}
+              />
+            </div>
+             <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="variant">Variant</Label>
+                  <Select value={selectedComponent.variant} onValueChange={(value: ButtonVariant) => onUpdate(selectedComponent.id, { variant: value })}>
+                      <SelectTrigger id="variant"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="default">Default</SelectItem>
+                          <SelectItem value="secondary">Secondary</SelectItem>
+                          <SelectItem value="destructive">Destructive</SelectItem>
+                          <SelectItem value="outline">Outline</SelectItem>
+                          <SelectItem value="ghost">Ghost</SelectItem>
+                          <SelectItem value="link">Link</SelectItem>
+                      </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="size">Size</Label>
+                   <Select value={selectedComponent.size} onValueChange={(value: ButtonSize) => onUpdate(selectedComponent.id, { size: value })}>
+                      <SelectTrigger id="size"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="default">Default</SelectItem>
+                          <SelectItem value="sm">Small</SelectItem>
+                          <SelectItem value="lg">Large</SelectItem>
+                          <SelectItem value="icon">Icon</SelectItem>
+                      </SelectContent>
+                  </Select>
+                </div>
+             </div>
           </div>
+        );
+      case 'Image':
+        return (
+            <div className="space-y-4">
+                <div>
+                    <Label htmlFor="src">Image URL</Label>
+                    <Input id="src" value={selectedComponent.src} onChange={(e) => onUpdate(selectedComponent.id, { src: e.target.value })} placeholder="https://placehold.co/600x400.png" />
+                </div>
+                <div>
+                    <Label htmlFor="alt">Alt Text</Label>
+                    <Input id="alt" value={selectedComponent.alt} onChange={(e) => onUpdate(selectedComponent.id, { alt: e.target.value })} placeholder="Descriptive text for the image" />
+                </div>
+            </div>
         );
        case 'Table':
         return (
@@ -315,6 +423,28 @@ const PropertiesPanel = ({ selectedComponent, onUpdate }: { selectedComponent: B
                     </>
                 )}
             </div>
+        );
+    case 'Spacer':
+        return (
+            <div className="space-y-4">
+                <div>
+                    <Label htmlFor="size">Height</Label>
+                    <Select value={selectedComponent.size} onValueChange={(value: SpacerSize) => onUpdate(selectedComponent.id, { size: value })}>
+                        <SelectTrigger id="size"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="sm">Small (16px)</SelectItem>
+                            <SelectItem value="md">Medium (32px)</SelectItem>
+                            <SelectItem value="lg">Large (64px)</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+        );
+     case 'Divider':
+        return (
+            <div>
+                 <p className="text-muted-foreground text-sm">This component is a visual separator. It has no properties to edit.</p>
+            </div>
         )
       default:
         return null;
@@ -355,7 +485,7 @@ export default function PropertyEditPage() {
   const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(!isNew);
-  const [descriptionMode, setDescriptionMode] = useState<'builder' | 'html'>('builder');
+  const [descriptionMode, setDescriptionMode] = useState<'builder' | 'json'>('builder');
   const sensors = useSensors(useSensor(PointerSensor));
 
   useEffect(() => {
@@ -406,13 +536,22 @@ export default function PropertyEditPage() {
 
         switch (type) {
             case 'Text':
-                newComponent = { id: uuidv4(), type: 'Text', text: 'New Text Block', size: 'md' };
+                newComponent = { id: uuidv4(), type: 'Text', text: 'New Text Block', size: 'md', align: 'left', color: 'default', style: [] };
                 break;
             case 'Button':
-                newComponent = { id: uuidv4(), type: 'Button', text: 'New Button' };
+                newComponent = { id: uuidv4(), type: 'Button', text: 'Click Me', href: '', variant: 'default', size: 'default' };
                 break;
             case 'Table':
                 newComponent = { id: uuidv4(), type: 'Table', headers: ['Feature', 'Value'], rows: [['Bedrooms', '3'], ['Bathrooms', '2']] };
+                break;
+            case 'Image':
+                newComponent = { id: uuidv4(), type: 'Image', src: 'https://placehold.co/600x400.png', alt: 'Placeholder image' };
+                break;
+            case 'Spacer':
+                newComponent = { id: uuidv4(), type: 'Spacer', size: 'md' };
+                break;
+            case 'Divider':
+                newComponent = { id: uuidv4(), type: 'Divider' };
                 break;
             default:
                 return;
@@ -446,7 +585,6 @@ export default function PropertyEditPage() {
   const handleSave = async () => {
     let descriptionToSave = property.description;
     
-    // Ensure description is valid JSON before saving
     if (descriptionMode === 'builder') {
         descriptionToSave = JSON.stringify(components);
     }
@@ -484,14 +622,11 @@ export default function PropertyEditPage() {
   };
 
   const handleDescriptionModeChange = (checked: boolean) => {
-    const newMode = checked ? 'html' : 'builder';
-    if (newMode === 'html') {
-      // Switching to HTML mode, we just keep the current JSON string.
-      // The user is now responsible for the raw JSON content.
+    const newMode = checked ? 'json' : 'builder';
+    if (newMode === 'json') {
       setProperty(p => ({...p, description: JSON.stringify(components, null, 2)}));
     } else {
-      // Switching back to builder, parse the text area content
-      setComponents(parseDescription(property.description || ''));
+      setComponents(parseDescription(property.description || '[]'));
     }
     setDescriptionMode(newMode);
   };
@@ -559,7 +694,7 @@ export default function PropertyEditPage() {
                             <Label htmlFor="description-mode" className="flex items-center gap-2 text-sm">
                                 <Blocks className="w-4 h-4"/> Builder
                             </Label>
-                            <Switch id="description-mode" checked={descriptionMode === 'html'} onCheckedChange={handleDescriptionModeChange} />
+                            <Switch id="description-mode" checked={descriptionMode === 'json'} onCheckedChange={handleDescriptionModeChange} />
                             <Label htmlFor="description-mode" className="flex items-center gap-2 text-sm">
                                 <Code className="w-4 h-4"/> Raw JSON
                             </Label>
@@ -578,13 +713,11 @@ export default function PropertyEditPage() {
                             onChange={(e) => {
                                 handleInputChange(e);
                                 try {
-                                    // Also try to update builder components in real-time
                                     const parsed = JSON.parse(e.target.value);
                                     if (Array.isArray(parsed)) {
                                         setComponents(parsed);
                                     }
                                 } catch (error) {
-                                    // Ignore parse errors while typing
                                 }
                             }}
                             className="w-full flex-grow min-h-[500px] font-code"
@@ -617,6 +750,9 @@ export default function PropertyEditPage() {
                {activeComponentType === 'Text' && <Type className="w-6 h-6" />}
                {activeComponentType === 'Button' && <RectangleHorizontal className="w-6 h-6" />}
                {activeComponentType === 'Table' && <TableIcon className="w-6 h-6" />}
+               {activeComponentType === 'Image' && <ImageIcon className="w-6 h-6" />}
+               {activeComponentType === 'Spacer' && <Minus className="w-6 h-6" />}
+               {activeComponentType === 'Divider' && <Divide className="w-6 h-6" />}
                <span className="font-medium">{activeComponentType}</span>
              </div>
           ) : null}
