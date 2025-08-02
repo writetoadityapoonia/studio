@@ -571,7 +571,7 @@ export default function PropertyEditPage() {
   const sensors = useSensors(useSensor(PointerSensor));
 
   useEffect(() => {
-    getPropertyTypes().then(setPropert-yTypes);
+    getPropertyTypes().then(setPropertyTypes);
 
     if (!isNew && id) {
       getPropertyById(id).then(existingProperty => {
@@ -912,5 +912,7 @@ export default function PropertyEditPage() {
     </ClientOnly>
   );
 }
+
+    
 
     
