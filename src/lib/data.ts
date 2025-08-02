@@ -1,7 +1,7 @@
 'use server';
 
 import { connectToDatabase } from './mongodb';
-import type { Property } from './types';
+import type { Property, Enquiry } from './types';
 import { ObjectId } from 'mongodb';
 
 async function getPropertiesCollection() {
@@ -9,20 +9,22 @@ async function getPropertiesCollection() {
     return db.collection('properties');
 }
 
-function processProperty(p: any): Property {
-    const { _id, ...rest } = p;
-    return {
-        ...rest,
-        id: _id.toString(),
-    } as Property;
+async function getEnquiriesCollection() {
+    const db = await connectToDatabase();
+    return db.collection('enquiries');
 }
+
+function processDocument(doc: any) {
+    if (!doc) return null;
+    const { _id, ...rest } = doc;
+    return { ...rest, id: _id.toString() };
+}
+
 
 export async function getProperties(): Promise<Property[]> {
   const collection = await getPropertiesCollection();
   const properties = await collection.find({}).sort({ _id: -1 }).toArray();
-
-  // Map MongoDB _id to id and remove the original _id object
-  return properties.map(processProperty);
+  return properties.map(p => processDocument(p) as Property);
 }
 
 export async function getPropertyById(id: string): Promise<Property | null> {
@@ -31,10 +33,14 @@ export async function getPropertyById(id: string): Promise<Property | null> {
   }
   const collection = await getPropertiesCollection();
   const property = await collection.findOne({ _id: new ObjectId(id) });
+  return processDocument(property) as Property | null;
+}
 
-  if (!property) {
-    return null;
-  }
-
-  return processProperty(property);
+export async function getEnquiriesForProperty(propertyId: string): Promise<Enquiry[]> {
+    if (!ObjectId.isValid(propertyId)) {
+        return [];
+    }
+    const collection = await getEnquiriesCollection();
+    const enquiries = await collection.find({ propertyId }).sort({ createdAt: -1 }).toArray();
+    return enquiries.map(e => processDocument(e) as Enquiry);
 }

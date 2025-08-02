@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Bath, BedDouble, Ruler, MapPin } from 'lucide-react';
 import { DescriptionRenderer } from '@/components/description-renderer';
 import { formatCurrency } from '@/lib/utils';
+import { EnquiryForm } from '@/components/enquiry-form';
 
 
 export default async function PropertyPage({ params }: { params: { id: string } }) {
@@ -86,9 +87,7 @@ export default async function PropertyPage({ params }: { params: { id: string } 
                     </div>
                 </div>
 
-                <h3 className="text-xl font-bold mb-4">Make an Enquiry</h3>
-                {/* Enquiry form can be added here */}
-                 <p className="text-sm text-muted-foreground">Contact us to learn more about this amazing property.</p>
+                <EnquiryForm propertyId={property.id} />
             </div>
         </div>
       </div>

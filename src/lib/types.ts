@@ -10,3 +10,12 @@ export interface Property {
   images: string[];
   description: string;
 }
+
+export interface Enquiry {
+  id: string;
+  propertyId: string;
+  name: string;
+  email: string;
+  phone: string;
+  createdAt: Date;
+}
