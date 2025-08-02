@@ -5,15 +5,21 @@ import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, BedDouble, Bath, Ruler, Building } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Button } from './ui/button';
 
-export function PropertyCard({ property }) {
+export function PropertyCard({ property, view = 'grid' }) {
+
+  const isListView = view === 'list';
+
   return (
-    <Card className="flex flex-col overflow-hidden transition-all hover:shadow-lg w-full bg-card border-border group h-full">
-      <div className="relative">
-        <Carousel className="w-full">
+    <Card className={cn(
+        "flex overflow-hidden transition-all hover:shadow-lg w-full bg-card border-border group h-full",
+        isListView ? "flex-row" : "flex-col"
+    )}>
+      <div className={cn("relative flex-shrink-0", isListView ? "w-1/3" : "w-full")}>
+        <Carousel className="w-full h-full">
           <CarouselContent>
             {(property.images && property.images.length > 0) ? (
               property.images.map((src, index) => (
@@ -23,7 +29,7 @@ export function PropertyCard({ property }) {
                     alt={`${property.title} image ${index + 1}`}
                     width={800}
                     height={450}
-                    className="w-full h-56 object-cover"
+                    className={cn("w-full object-cover", isListView ? "h-full aspect-video" : "h-56")}
                     data-ai-hint="property image"
                   />
                 </CarouselItem>
@@ -35,7 +41,7 @@ export function PropertyCard({ property }) {
                     alt="Placeholder image"
                     width={800}
                     height={450}
-                    className="w-full h-56 object-cover"
+                    className={cn("w-full object-cover", isListView ? "h-full aspect-video" : "h-56")}
                     data-ai-hint="property placeholder"
                   />
                 </CarouselItem>
@@ -58,7 +64,7 @@ export function PropertyCard({ property }) {
                 <span className="truncate">{property.location}</span>
             </div>
 
-            <div className="mt-4 pt-4 border-t grid grid-cols-2 gap-4 text-sm">
+            <div className={cn("mt-4 pt-4 border-t gap-4 text-sm", isListView ? "grid grid-cols-2" : "grid grid-cols-2")}>
                  {property.bedrooms > 0 && (
                     <div className="flex items-center gap-2 text-muted-foreground">
                         <BedDouble className="w-5 h-5 text-primary"/>
