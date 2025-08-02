@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 import { SlidersHorizontal } from 'lucide-react';
+import { useDebounce } from '@/hooks/use-debounce';
+import { Input } from './ui/input';
 
 const PRICE_RANGE = {
   min: 0,
@@ -23,6 +25,7 @@ function getInitialFilters(searchParams) {
         type: searchParams.get('type') || '',
         minPrice: parseInt(searchParams.get('minPrice') || PRICE_RANGE.min, 10),
         maxPrice: parseInt(searchParams.get('maxPrice') || PRICE_RANGE.max, 10),
+        search: searchParams.get('search') || '',
     };
 }
 
@@ -34,6 +37,8 @@ export function FilterSidebar({ propertyTypes }) {
   const [hasMounted, setHasMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [filters, setFilters] = useState(() => getInitialFilters(searchParams));
+
+  const debouncedSearch = useDebounce(filters.search, 300);
   
   useEffect(() => {
     setHasMounted(true);
@@ -55,6 +60,12 @@ export function FilterSidebar({ propertyTypes }) {
         params.set('type', filters.type);
     } else {
         params.delete('type');
+    }
+
+    if (debouncedSearch) {
+        params.set('search', debouncedSearch);
+    } else {
+        params.delete('search');
     }
     
     // Only set price if it's different from the default
@@ -84,12 +95,17 @@ export function FilterSidebar({ propertyTypes }) {
   const handlePriceChange = (value) => {
     setFilters(prev => ({ ...prev, minPrice: value[0], maxPrice: value[1] }));
   };
+
+   const handleSearchChange = (event) => {
+    setFilters(prev => ({ ...prev, search: event.target.value }));
+  };
   
   const resetFilters = () => {
     const params = new URLSearchParams(searchParams.toString());
     params.delete('type');
     params.delete('minPrice');
     params.delete('maxPrice');
+    params.delete('search');
     params.delete('page');
     router.push(`/?${params.toString()}`, { scroll: false });
   }
@@ -100,6 +116,16 @@ export function FilterSidebar({ propertyTypes }) {
         <CardTitle>Filters</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        <div className="space-y-2">
+            <Label htmlFor="search-filter">Search by Name or Location</Label>
+            <Input 
+                id="search-filter"
+                placeholder="e.g., 'Prestige Falcon City'"
+                value={filters.search}
+                onChange={handleSearchChange}
+            />
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="type-filter">Property Type</Label>
           <Select
