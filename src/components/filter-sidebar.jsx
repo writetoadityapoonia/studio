@@ -32,11 +32,13 @@ export function FilterSidebar({ propertyTypes }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   
+  const [hasMounted, setHasMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [filters, setFilters] = useState(() => getInitialFilters(searchParams));
   const debouncedFilters = useDebounce(filters, 500);
 
   useEffect(() => {
+    setHasMounted(true);
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
     checkMobile();
     window.addEventListener('resize', checkMobile);
@@ -83,13 +85,16 @@ export function FilterSidebar({ propertyTypes }) {
         params.delete('maxPrice');
     }
     
+    // Reset page to 1 when filters change
+    params.set('page', '1');
+
     router.push(`/?${params.toString()}`, { scroll: false });
 
   }, [debouncedFilters, router, searchParams]);
 
 
   const handleTypeChange = (value) => {
-    setFilters(prev => ({ ...prev, type: value }));
+    setFilters(prev => ({ ...prev, type: value === 'all' ? '' : value }));
   };
 
   const handlePriceChange = (value) => {
@@ -101,6 +106,7 @@ export function FilterSidebar({ propertyTypes }) {
     params.delete('type');
     params.delete('minPrice');
     params.delete('maxPrice');
+    params.delete('page');
     router.push(`/?${params.toString()}`, { scroll: false });
   }
 
@@ -113,14 +119,14 @@ export function FilterSidebar({ propertyTypes }) {
         <div className="space-y-2">
           <Label htmlFor="type-filter">Property Type</Label>
           <Select
-            value={filters.type}
+            value={filters.type || 'all'}
             onValueChange={handleTypeChange}
           >
             <SelectTrigger id="type-filter">
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Types</SelectItem>
+              <SelectItem value="all">All Types</SelectItem>
               {propertyTypes.map((type) => (
                 <SelectItem key={type.id} value={type.name}>{type.name}</SelectItem>
               ))}
@@ -150,6 +156,15 @@ export function FilterSidebar({ propertyTypes }) {
     </Card>
   );
 
+  if (!hasMounted) {
+    return (
+        <Card className="sticky top-24">
+            <CardHeader><CardTitle>Filters</CardTitle></CardHeader>
+            <CardContent><div className="h-64 w-full animate-pulse bg-muted rounded-md" /></CardContent>
+        </Card>
+    );
+  }
+
   if (isMobile) {
     return (
         <Sheet>
@@ -173,4 +188,3 @@ export function FilterSidebar({ propertyTypes }) {
 
   return <FilterContent />;
 }
-

@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect, useTransition } from 'react';
@@ -10,7 +9,7 @@ import { Loader2 } from 'lucide-react';
 
 const PROPERTIES_PER_PAGE = 6;
 
-export function PropertyList({ initialProperties, searchParams = {}, view = 'grid' }) {
+export function PropertyList({ initialProperties, searchParams, view = 'grid' }) {
   const [properties, setProperties] = useState(initialProperties);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(initialProperties.length >= PROPERTIES_PER_PAGE);
@@ -18,12 +17,8 @@ export function PropertyList({ initialProperties, searchParams = {}, view = 'gri
 
   // Effect to handle changes in searchParams from filters
   useEffect(() => {
-    // When searchParams change, filters have been applied.
-    // Reset the properties to the new initial set from the server props.
-    // In a real app, you might fetch page 1 here again based on new searchParams.
-    // For this setup, we rely on the parent component re-rendering with new initialProperties.
     setProperties(initialProperties);
-    setPage(1); // Reset page number
+    setPage(1); 
     setHasMore(initialProperties.length >= PROPERTIES_PER_PAGE);
   }, [initialProperties]);
 
@@ -31,9 +26,9 @@ export function PropertyList({ initialProperties, searchParams = {}, view = 'gri
     startTransition(async () => {
         const nextPage = page + 1;
         
-        // Pass current searchParams to getProperties when loading more
+        const params = Object.fromEntries(searchParams.entries());
         const newProperties = await getProperties({
-            ...searchParams,
+            ...params,
             limit: PROPERTIES_PER_PAGE,
             page: nextPage
         });
@@ -52,6 +47,14 @@ export function PropertyList({ initialProperties, searchParams = {}, view = 'gri
   const listClass = "flex flex-col gap-8";
   const gridClass = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-8";
 
+  if (properties.length === 0) {
+      return (
+          <div className="text-center py-12 text-muted-foreground lg:col-span-4">
+              <p>No properties found matching your criteria.</p>
+          </div>
+      );
+  }
+
   return (
     <>
       <div className={view === 'list' ? listClass : gridClass}>
@@ -69,10 +72,3 @@ export function PropertyList({ initialProperties, searchParams = {}, view = 'gri
     </>
   );
 }
-
-    
-
-
-
-
-

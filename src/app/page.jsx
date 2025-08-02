@@ -1,8 +1,7 @@
 
-
 'use client';
 
-import { useState, useEffect, Suspense, useTransition } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { PropertyList } from '@/components/property-list';
 import { getProperties, getPropertyTypes } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,6 +9,7 @@ import { FilterSidebar } from '@/components/filter-sidebar';
 import { Card } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { LayoutGrid, List } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 
 function PropertyListSkeleton({ view = 'grid' }) {
     const listClass = "flex flex-col gap-4";
@@ -42,9 +42,10 @@ function PropertyListSkeleton({ view = 'grid' }) {
     )
 }
 
-function PageClient({ initialProperties, propertyTypes, searchParams }) {
+function PageClient({ initialProperties, propertyTypes }) {
     const [view, setView] = useState('grid');
-    const hasSearchResults = searchParams.lat && searchParams.lng;
+    const searchParams = useSearchParams();
+    const hasSearchResults = searchParams.has('lat') && searchParams.has('lng');
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -77,44 +78,16 @@ function PageClient({ initialProperties, propertyTypes, searchParams }) {
                         </ToggleGroup>
                     </div>
                     
-                    <PropertyList initialProperties={initialProperties} searchParams={searchParams} view={view} />
+                    <PropertyList 
+                        key={searchParams.toString()} 
+                        initialProperties={initialProperties} 
+                        searchParams={searchParams} 
+                        view={view} 
+                    />
 
-                    {initialProperties.length === 0 && (
-                        <div className="text-center py-12 text-muted-foreground lg:col-span-4">
-                            <p>No properties found matching your criteria.</p>
-                        </div>
-                    )}
                 </main>
             </div>
         </div>
-    );
-}
-
-export default function PropertiesPageWrapper({ searchParams }) {
-    return (
-        <Suspense fallback={<PropertiesPageSkeleton />}>
-            <PropertiesPage searchParams={searchParams} />
-        </Suspense>
-    );
-}
-
-async function PropertiesPage({ searchParams }) {
-    // Data is fetched in this async Server Component
-    const [initialProperties, propertyTypes] = await Promise.all([
-        getProperties({ ...searchParams, limit: 6, page: 1 }),
-        getPropertyTypes()
-    ]);
-
-    // The key forces the client component to re-mount when search params change
-    const key = JSON.stringify(searchParams);
-
-    return (
-        <PageClient
-            key={key}
-            initialProperties={initialProperties}
-            propertyTypes={propertyTypes}
-            searchParams={searchParams}
-        />
     );
 }
 
@@ -138,4 +111,51 @@ function PropertiesPageSkeleton() {
             </div>
         </div>
     )
+}
+
+
+function PropertiesPage({ searchParams }) {
+    const [properties, setProperties] = useState([]);
+    const [propertyTypes, setPropertyTypes] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function loadData() {
+            setLoading(true);
+            // Convert searchParams to a plain object for the server action
+            const params = Object.fromEntries(searchParams.entries());
+            const [props, types] = await Promise.all([
+                getProperties({ ...params, limit: 6, page: 1 }),
+                getPropertyTypes()
+            ]);
+            setProperties(props);
+            setPropertyTypes(types);
+            setLoading(false);
+        }
+        loadData();
+    }, [searchParams]);
+
+    if (loading) {
+        return <PropertiesPageSkeleton />;
+    }
+
+    return (
+        <PageClient
+            initialProperties={properties}
+            propertyTypes={propertyTypes}
+        />
+    );
+}
+
+export default function PropertiesPageWrapper() {
+    return (
+        <Suspense fallback={<PropertiesPageSkeleton />}>
+            <PropertiesPageWithSearchParams />
+        </Suspense>
+    );
+}
+
+function PropertiesPageWithSearchParams() {
+    const searchParams = useSearchParams();
+    return <PropertiesPage searchParams={searchParams} />;
 }
