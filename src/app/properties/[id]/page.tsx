@@ -4,6 +4,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Bath, BedDouble, Ruler, MapPin } from 'lucide-react';
+import { DynamicIframe } from '@/components/dynamic-iframe';
 
 export default async function PropertyPage({ params }: { params: { id: string } }) {
   const property = await getPropertyById(params.id);
@@ -43,11 +44,9 @@ export default async function PropertyPage({ params }: { params: { id: string } 
 
           <div className="prose prose-invert max-w-none bg-background p-4 rounded-lg">
             {/* The iframe will securely render the HTML from the page builder */}
-            <iframe
+            <DynamicIframe
               srcDoc={property.description}
-              className="w-full h-[400px] border-0"
               title="Property Description"
-              sandbox="allow-scripts" // Keep it secure
             />
           </div>
         </div>

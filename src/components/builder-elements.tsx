@@ -57,6 +57,28 @@ export const componentToHtml = (components: BuilderComponent[]): string => {
                 return '';
         }
     }).join('\n');
+    
+    const resizeScript = `
+        <script>
+            const sendHeight = () => {
+                // Add a small buffer for safety
+                const height = document.documentElement.scrollHeight + 5;
+                window.parent.postMessage({ type: 'iframe-resize', height: height }, '*');
+            };
+            
+            // Send height on load
+            window.addEventListener('load', sendHeight);
+
+            // Send height on mutations
+            const observer = new MutationObserver(sendHeight);
+            observer.observe(document.body, { attributes: true, childList: true, subtree: true });
+
+            // Also use ResizeObserver for more robust detection
+            const resizeObserver = new ResizeObserver(sendHeight);
+            resizeObserver.observe(document.body);
+        </script>
+    `;
+
     return `
 <!DOCTYPE html>
 <html lang="en">
@@ -71,12 +93,14 @@ export const componentToHtml = (components: BuilderComponent[]): string => {
             padding: 1rem;
             background-color: transparent;
             color: hsl(var(--foreground));
+            margin: 0; /* Important to remove default body margin */
         }
         p, div, table { margin: 1rem 0; }
     </style>
 </head>
 <body>
     ${bodyContent}
+    ${resizeScript}
 </body>
 </html>
     `;
