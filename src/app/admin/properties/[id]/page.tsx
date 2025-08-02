@@ -6,9 +6,9 @@ import { DndContext, DragEndEvent, DragOverlay, useDroppable, PointerSensor, use
 import { SortableContext, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { v4 as uuidv4 } from 'uuid';
-import { Plus, Trash2, Type, RectangleHorizontal, Save, GripVertical, TableIcon, Code, Blocks, Image as ImageIcon, Minus, Divide } from 'lucide-react';
+import { Plus, Trash2, Type, RectangleHorizontal, Save, GripVertical, TableIcon, Code, Blocks, Image as ImageIcon, Minus, Divide, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -27,6 +27,85 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { AlignLeft, AlignCenter, AlignRight, Bold, Italic } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
+const AI_PROMPT = `You are an expert real estate copywriter. Your task is to take raw, factual text about a property and transform it into a structured JSON array that can be used by a web application's description builder.
+
+**Your Goal:** Convert the provided text into a JSON array of components. The final output must be only the JSON array, without any commentary or wrapper. Each object in the array represents a component like text, a table, or a divider.
+
+**JSON Component Schema:**
+
+You must use the following component types and schemas:
+
+1.  **Text**: For headings and paragraphs.
+    *   `{ "id": "uuid", "type": "Text", "text": "...", "size": "sm|md|lg|xl", "align": "left|center|right", "color": "default|primary|muted", "style": ["bold", "italic"] }`
+2.  **Table**: For structured data like highlights or unit configurations.
+    *   `{ "id": "uuid", "type": "Table", "headers": ["Header1", "Header2"], "rows": [["r1c1", "r1c2"], ["r2c1", "r2c2"]] }`
+3.  **Image**: For images.
+    *   `{ "id": "uuid", "type": "Image", "src": "url", "alt": "description" }`
+4.  **Spacer**: For adding vertical space.
+    *   `{ "id": "uuid", "type": "Spacer", "size": "sm|md|lg" }`
+5.  **Divider**: For a horizontal rule.
+    *   `{ "id": "uuid", "type": "Divider" }`
+
+**Instructions:**
+
+1.  **Analyze the Input**: Read the provided text and identify the different sections (e.g., introduction, highlights, amenities).
+2.  **Generate IDs**: For each component object, generate a unique UUID for the "id" field.
+3.  **Map to Components**:
+    *   Use "Text" components for titles, paragraphs, and lists. Use different sizes for headings (`xl`, `lg`) and body text (`md`).
+    *   Use "Table" components for tabular data.
+    *   Use "Divider" components to separate major sections.
+    *   Use "Spacer" components to add breathing room where appropriate.
+4.  **Return JSON only**: Your entire output must be a single, valid JSON array. Do not include any text or formatting before or after the JSON.
+
+**Example Input Text:**
+"Amazing Downtown Loft
+This sunny loft has 2 beds, 2 baths, and is 1200 sqft.
+Features:
+- Rooftop Deck
+- Gym"
+
+**Example Output JSON:**
+[
+  {"id": "c7a8f1e2-b3d4-c5e6-f7a8-b9c0d1e2f3a4", "type": "Text", "text": "Amazing Downtown Loft", "size": "xl", "align": "left", "color": "default", "style": ["bold"]},
+  {"id": "d8b9e2f3-c4d5-d6e7-g8b9-c0d1e2f3a4b5", "type": "Text", "text": "This sunny loft has 2 beds, 2 baths, and is 1200 sqft.", "size": "md", "align": "left", "color": "default", "style": []},
+  {"id": "e9c0f3a4-d5e6-e7f8-h9c0-d1e2f3a4b5c6", "type": "Table", "headers": ["Feature", "Details"], "rows": [["Beds", "2"], ["Baths", "2"], ["Area", "1200 sqft"]]},
+  {"id": "f0d1a4b5-e6f7-f8g9-i0d1-e2f3a4b5c6d7", "type": "Text", "text": "Features:", "size": "lg", "align": "left", "color": "default", "style": []},
+  {"id": "01e2b5c6-f7g8-g9h0-j1e2-f3a4b5c6d7e8", "type": "Text", "text": "- Rooftop Deck\n- Gym", "size": "md", "align": "left", "color": "default", "style": []}
+]
+`;
+
+
+function PromptCard() {
+    const { toast } = useToast();
+    const [hasCopied, setHasCopied] = useState(false);
+
+    const copyToClipboard = () => {
+        navigator.clipboard.writeText(AI_PROMPT);
+        setHasCopied(true);
+        toast({ title: "Prompt Copied!", description: "The AI prompt has been copied to your clipboard." });
+        setTimeout(() => setHasCopied(false), 2000);
+    };
+
+    return (
+        <Card className="w-full h-full">
+            <CardHeader>
+                <CardTitle>AI Prompt for JSON Generation</CardTitle>
+                <CardDescription>
+                    Use this prompt with an external AI (like Gemini or ChatGPT) to convert plain text into the required JSON format.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="p-4 bg-muted rounded-md max-h-[400px] overflow-y-auto">
+                    <pre className="text-xs whitespace-pre-wrap font-code">{AI_PROMPT}</pre>
+                </div>
+                <Button onClick={copyToClipboard} className="w-full">
+                    {hasCopied ? <Check className="mr-2" /> : <Copy className="mr-2" />}
+                    {hasCopied ? 'Copied!' : 'Copy Prompt'}
+                </Button>
+            </CardContent>
+        </Card>
+    );
+}
 
 function SortableItem({ id, children }: { id: string; children: React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
@@ -587,6 +666,15 @@ export default function PropertyEditPage() {
     
     if (descriptionMode === 'builder') {
         descriptionToSave = JSON.stringify(components);
+    } else if (descriptionMode === 'json') {
+        try {
+            // Validate JSON before saving
+            JSON.parse(property.description || '[]');
+            descriptionToSave = property.description;
+        } catch(e) {
+            toast({ title: "Invalid JSON", description: "Could not save. Please fix the JSON in the Raw JSON editor.", variant: "destructive"});
+            return;
+        }
     }
 
     const propertyData = { ...property, description: descriptionToSave };
@@ -627,7 +715,8 @@ export default function PropertyEditPage() {
       setProperty(p => ({...p, description: JSON.stringify(components, null, 2)}));
     } else {
       try {
-        setComponents(parseDescription(property.description || '[]'));
+        const parsedComponents = parseDescription(property.description || '[]');
+        setComponents(parsedComponents);
       } catch (e) {
         toast({ title: "Invalid JSON", description: "Could not parse JSON, staying in raw mode.", variant: 'destructive' });
         setDescriptionMode('json');
@@ -637,6 +726,18 @@ export default function PropertyEditPage() {
     setDescriptionMode(newMode);
   };
   
+  const handleRawJsonChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newDescription = e.target.value;
+    setProperty(prev => ({...prev, description: newDescription}));
+    try {
+        const parsedComponents = parseDescription(newDescription);
+        setComponents(parsedComponents);
+    } catch(e) {
+        // Don't toast here, it would be annoying on every keystroke
+        // Maybe show a small validation error icon/message
+    }
+  }
+
   const activeComponentType = activeId && activeId.toString().startsWith('toolbox-') ? activeId.toString().split('-')[1] as BuilderComponent['type'] : null;
   
   if (loading && !isNew) {
@@ -718,9 +819,7 @@ export default function PropertyEditPage() {
                         <Textarea 
                             name="description"
                             value={property.description || ''}
-                            onChange={(e) => {
-                                handleInputChange(e);
-                            }}
+                            onChange={handleRawJsonChange}
                             className="w-full flex-grow min-h-[500px] font-code"
                             placeholder="Enter property description as a JSON array here..."
                         />
@@ -732,14 +831,7 @@ export default function PropertyEditPage() {
                   {descriptionMode === 'builder' ? (
                      <PropertiesPanel selectedComponent={selectedComponent} onUpdate={handleUpdateComponent} />
                   ) : (
-                     <Card className="w-full h-full">
-                        <CardHeader>
-                            <CardTitle>Raw JSON Mode</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-muted-foreground">You are in raw JSON mode. Edit the JSON array directly in the main panel. Ensure the format is correct before saving.</p>
-                        </CardContent>
-                     </Card>
+                     <PromptCard />
                   )}
               </div>
           </div>
