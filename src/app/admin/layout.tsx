@@ -1,7 +1,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Home, Mail, Building } from 'lucide-react';
+import { Home, Mail, Building, Settings } from 'lucide-react';
 
 export default function AdminLayout({
   children,
@@ -23,6 +23,12 @@ export default function AdminLayout({
                     <Button variant="outline">
                         <Mail className="mr-2" />
                         Enquiries
+                    </Button>
+                </Link>
+                <Link href="/admin/settings">
+                    <Button variant="outline">
+                        <Settings className="mr-2" />
+                        Settings
                     </Button>
                 </Link>
             </nav>

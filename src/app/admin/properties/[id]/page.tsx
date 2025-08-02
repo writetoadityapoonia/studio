@@ -552,6 +552,7 @@ export default function PropertyEditPage() {
   const [property, setProperty] = useState<Partial<Property>>({
       title: '',
       location: '',
+      developer: '',
       price: 0,
       type: 'Apartment',
       bedrooms: 0,
@@ -578,6 +579,7 @@ export default function PropertyEditPage() {
             bedrooms: existingProperty.bedrooms ?? 0,
             bathrooms: existingProperty.bathrooms ?? 0,
             area: existingProperty.area ?? 0,
+            developer: existingProperty.developer ?? '',
           });
           if (existingProperty.bedrooms > 0 || existingProperty.bathrooms > 0) {
             setShowBedsBaths(true);
@@ -801,6 +803,10 @@ export default function PropertyEditPage() {
                               <Label htmlFor="location">Location</Label>
                               <Input id="location" name="location" value={property.location || ''} onChange={handleInputChange} />
                           </div>
+                           <div className="space-y-2">
+                              <Label htmlFor="developer">Developer</Label>
+                              <Input id="developer" name="developer" value={property.developer || ''} onChange={handleInputChange} />
+                          </div>
                           <div className="space-y-2">
                               <Label htmlFor="price">Price (in INR)</Label>
                               <Input id="price" name="price" type="number" value={property.price || 0} onChange={handleInputChange} />
@@ -823,7 +829,7 @@ export default function PropertyEditPage() {
                             </>
                           )}
 
-                          <div className={cn("space-y-2", !showBedsBaths ? "md:col-span-2" : "")}>
+                          <div className={cn("space-y-2", !showBedsBaths ? "md:col-span-1" : "")}>
                               <Label htmlFor="area">Area (sqft)</Label>
                               <Input id="area" name="area" type="number" value={property.area || 0} onChange={handleInputChange} />
                           </div>
