@@ -26,7 +26,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { AlignLeft, AlignCenter, AlignRight, Bold, Italic } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { CldUploadWidget } from 'next-cloudinary';
-import { CLOUDINARY_UPLOAD_PRESET } from '@/lib/cloudinary';
+import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '@/lib/cloudinary';
 
 
 const AI_PROMPT = `You are an expert real estate copywriter. Your task is to take raw, factual text about a property and transform it into a structured JSON array that can be used by a web application's description builder.
@@ -625,6 +625,8 @@ export default function PropertyEditPage() {
   const [descriptionMode, setDescriptionMode] = useState('builder');
   const [showBedsBaths, setShowBedsBaths] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor));
+  
+  const isCloudinaryConfigured = CLOUDINARY_CLOUD_NAME && CLOUDINARY_CLOUD_NAME !== 'your_cloud_name' && CLOUDINARY_UPLOAD_PRESET && CLOUDINARY_UPLOAD_PRESET !== 'your_upload_preset_name';
 
   useEffect(() => {
     getPropertyTypes().then(setPropertyTypes);
@@ -938,7 +940,10 @@ export default function PropertyEditPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <ImageGrid images={property.images} onRemove={handleRemoveImage} onReorder={handleReorderImages} />
-                        <CldUploadWidget uploadPreset={CLOUDINARY_UPLOAD_PRESET} onUpload={handleImageUpload}
+                        <CldUploadWidget 
+                          cloudName={CLOUDINARY_CLOUD_NAME}
+                          uploadPreset={CLOUDINARY_UPLOAD_PRESET} 
+                          onUpload={handleImageUpload}
                         >
                             {({ open }) => {
                                 function handleOnClick(e) {
@@ -946,15 +951,17 @@ export default function PropertyEditPage() {
                                     open();
                                 }
                                 return (
-                                    <Button type="button" variant="outline" onClick={handleOnClick} className="w-full">
+                                    <Button type="button" variant="outline" onClick={handleOnClick} className="w-full" disabled={!isCloudinaryConfigured}>
                                         <UploadCloud className="mr-2" />
                                         Upload an Image
                                     </Button>
                                 );
                             }}
                         </CldUploadWidget>
-                        {(!CLOUDINARY_UPLOAD_PRESET || CLOUDINARY_UPLOAD_PRESET === 'your_upload_preset_name') && (
-                            <p className="text-sm text-destructive text-center">Cloudinary upload preset is not configured. Please set NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET in your .env file.</p>
+                        {!isCloudinaryConfigured && (
+                            <p className="text-sm text-destructive text-center">
+                              Cloudinary is not configured. Please set NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME and NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET in your .env file.
+                            </p>
                         )}
                     </CardContent>
                 </Card>
