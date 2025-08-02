@@ -582,7 +582,7 @@ function ImageGrid({ images, onRemove, onReorder }) {
                                     className="object-cover rounded-md"
                                 />
                                 <button
-                                    onClick={() => onRemove(url)}
+                                    onClick={(e) => { e.stopPropagation(); onRemove(url); }}
                                     className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-70 hover:opacity-100 transition-opacity"
                                 >
                                     <Trash2 className="w-3 h-3" />
