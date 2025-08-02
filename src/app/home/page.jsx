@@ -22,6 +22,13 @@ export default function HomePage() {
   };
 
   const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const karnatakaBounds = {
+    north: 18.46,
+    south: 11.59,
+    west: 74.05,
+    east: 78.58,
+  };
+
 
   return (
     <div className="container mx-auto px-4 py-8 flex-grow flex flex-col items-center justify-center text-center">
@@ -42,6 +49,8 @@ export default function HomePage() {
               options={{ 
                 types: ["geocode"],
                 componentRestrictions: { country: "in" },
+                bounds: karnatakaBounds,
+                strictBounds: false
               }}
               className={cn(
                 "flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"

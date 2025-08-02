@@ -649,6 +649,13 @@ export default function PropertyEditPage() {
   
   const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const isCloudinaryConfigured = CLOUDINARY_CLOUD_NAME && CLOUDINARY_CLOUD_NAME !== 'your_cloud_name' && CLOUDINARY_UPLOAD_PRESET && CLOUDINARY_UPLOAD_PRESET !== 'your_upload_preset_name';
+  const karnatakaBounds = {
+    north: 18.46,
+    south: 11.59,
+    west: 74.05,
+    east: 78.58,
+  };
+
 
   useEffect(() => {
     getPropertyTypes().then(setPropertyTypes);
@@ -930,6 +937,8 @@ export default function PropertyEditPage() {
                                     options={{ 
                                         types: ["geocode"],
                                         componentRestrictions: { country: "in" },
+                                        bounds: karnatakaBounds,
+                                        strictBounds: false
                                     }}
                                     defaultValue={property.location || ''}
                                     className={cn(
