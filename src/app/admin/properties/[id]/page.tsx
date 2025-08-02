@@ -6,7 +6,7 @@ import { DndContext, DragEndEvent, DragOverlay, useDroppable, PointerSensor, use
 import { SortableContext, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { v4 as uuidv4 } from 'uuid';
-import { Plus, Trash2, Type, RectangleHorizontal, Save, GripVertical, TableIcon, Code } from 'lucide-react';
+import { Plus, Trash2, Type, RectangleHorizontal, Save, GripVertical, TableIcon, Code, Blocks } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -348,12 +348,14 @@ export default function PropertyEditPage() {
       bedrooms: 1,
       bathrooms: 1,
       area: 0,
-      images: ['https://placehold.co/600x400.png']
+      images: ['https://placehold.co/600x400.png'],
+      description: '',
   });
   const [components, setComponents] = useState<BuilderComponent[]>([]);
   const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(!isNew);
+  const [descriptionMode, setDescriptionMode] = useState<'builder' | 'html'>('builder');
   const sensors = useSensors(useSensor(PointerSensor));
 
   useEffect(() => {
@@ -367,20 +369,29 @@ export default function PropertyEditPage() {
             bathrooms: existingProperty.bathrooms ?? 0,
             area: existingProperty.area ?? 0,
           });
-          setComponents(generateInitialComponents(existingProperty.description || ''));
+          const initialComponents = generateInitialComponents(existingProperty.description || '');
+          setComponents(initialComponents);
         } else {
           toast({ title: "Property not found", variant: "destructive" });
           router.push('/admin');
         }
         setLoading(false);
       });
+    } else {
+        const initialComponents = generateInitialComponents('');
+        setComponents(initialComponents);
+        setProperty(prev => ({...prev, description: componentToHtml(initialComponents)}));
     }
   }, [id, isNew, router, toast]);
 
   const selectedComponent = components.find(c => c.id === selectedComponentId) || null;
 
   const handleUpdateComponent = (id: string, newProps: Partial<BuilderComponent>) => {
-    setComponents(prev => prev.map(c => c.id === id ? { ...c, ...newProps } : c));
+    setComponents(prev => {
+        const newComponents = prev.map(c => c.id === id ? { ...c, ...newProps } : c);
+        setProperty(p => ({...p, description: componentToHtml(newComponents)}));
+        return newComponents;
+    });
   };
   
   const handleDragEnd = (event: DragEndEvent) => {
@@ -389,7 +400,6 @@ export default function PropertyEditPage() {
 
     if (!over) return;
     
-    // Dropping from Toolbox to Canvas
     if (active.id.toString().startsWith('toolbox-')) {
         const type = active.data.current?.type as BuilderComponent['type'];
         let newComponent: BuilderComponent;
@@ -407,35 +417,35 @@ export default function PropertyEditPage() {
             default:
                 return;
         }
-
-        const overIndex = over.id === 'canvas' ? components.length : components.findIndex(c => c.id === over.id);
-
-        if (overIndex !== -1) {
-             const newItems = [...components];
-             newItems.splice(overIndex, 0, newComponent);
-             setComponents(newItems);
-        } else {
-             setComponents(prev => [...prev, newComponent]);
-        }
         
+        const overIndex = over.id === 'canvas' ? components.length : components.findIndex(c => c.id === over.id);
+        const newItems = [...components];
+        if (overIndex !== -1) {
+             newItems.splice(overIndex, 0, newComponent);
+        } else {
+             newItems.push(newComponent);
+        }
+        setComponents(newItems);
+        setProperty(p => ({...p, description: componentToHtml(newItems)}));
         setSelectedComponentId(newComponent.id);
         return;
     }
     
-    // Reordering in Canvas
     if (active.id !== over.id) {
         setComponents(items => {
             const oldIndex = items.findIndex(item => item.id === active.id);
             const newIndex = items.findIndex(item => item.id === over.id);
-            if (oldIndex === -1 || newIndex === -1) return items; // Should not happen
-            return arrayMove(items, oldIndex, newIndex);
+            if (oldIndex === -1 || newIndex === -1) return items;
+            const newItems = arrayMove(items, oldIndex, newIndex);
+            setProperty(p => ({...p, description: componentToHtml(newItems)}));
+            return newItems;
         });
     }
   };
   
   const handleSave = async () => {
-    const descriptionHtml = componentToHtml(components);
-    const propertyData = { ...property, description: descriptionHtml };
+    // Description is already synced in property state
+    const propertyData = { ...property };
 
     try {
         if (isNew) {
@@ -446,7 +456,7 @@ export default function PropertyEditPage() {
             toast({ title: "Property Updated!", description: "Your changes have been saved." });
         }
         router.push('/admin');
-        router.refresh(); // To reflect changes in the admin list
+        router.refresh(); 
     } catch (error) {
         toast({
             title: "Error Saving Property",
@@ -464,6 +474,16 @@ export default function PropertyEditPage() {
           ...prev, 
           [name]: isNumericField ? (value === '' ? 0 : parseFloat(value)) : value 
       }));
+  };
+
+  const handleDescriptionModeChange = (checked: boolean) => {
+    const newMode = checked ? 'html' : 'builder';
+    if (newMode === 'html') {
+      setProperty(p => ({...p, description: componentToHtml(components)}));
+    } else {
+      setComponents(generateInitialComponents(property.description || ''));
+    }
+    setDescriptionMode(newMode);
   };
 
   const activeComponentType = activeId && activeId.toString().startsWith('toolbox-') ? activeId.toString().split('-')[1] as BuilderComponent['type'] : null;
@@ -485,9 +505,7 @@ export default function PropertyEditPage() {
           </header>
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] flex-grow overflow-hidden">
-              {/* Main Edit Area */}
               <div className="flex flex-col overflow-y-auto">
-                  {/* Property Details Form */}
                   <div className="p-6 border-b">
                      <Card>
                          <CardHeader><CardTitle>Property Details</CardTitle></CardHeader>
@@ -524,19 +542,50 @@ export default function PropertyEditPage() {
                      </Card>
                   </div>
 
-                  {/* Description Builder */}
                    <div className="p-6 flex-grow flex flex-col">
-                      <h2 className="text-xl font-bold mb-4">Property Description Builder</h2>
-                      <div className="grid grid-cols-[250px_1fr] flex-grow gap-6 h-full min-h-[500px]">
-                          <Toolbox />
-                          <Canvas components={components} setComponents={setComponents} selectedComponentId={selectedComponentId} setSelectedComponentId={setSelectedComponentId} />
+                      <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-bold">Property Description</h2>
+                        <div className="flex items-center space-x-2">
+                            <Label htmlFor="description-mode" className="flex items-center gap-2 text-sm">
+                                <Blocks className="w-4 h-4"/> Builder
+                            </Label>
+                            <Switch id="description-mode" checked={descriptionMode === 'html'} onCheckedChange={handleDescriptionModeChange} />
+                            <Label htmlFor="description-mode" className="flex items-center gap-2 text-sm">
+                                <Code className="w-4 h-4"/> HTML
+                            </Label>
+                        </div>
                       </div>
+
+                      {descriptionMode === 'builder' ? (
+                        <div className="grid grid-cols-[250px_1fr] flex-grow gap-6 h-full min-h-[500px]">
+                            <Toolbox />
+                            <Canvas components={components} setComponents={setComponents} selectedComponentId={selectedComponentId} setSelectedComponentId={setSelectedComponentId} />
+                        </div>
+                      ) : (
+                        <Textarea 
+                            name="description"
+                            value={property.description || ''}
+                            onChange={handleInputChange}
+                            className="w-full flex-grow min-h-[500px] font-code"
+                            placeholder="Enter property description HTML here..."
+                        />
+                      )}
                   </div>
               </div>
 
-              {/* Properties Panel */}
               <div className="p-4 border-l h-full overflow-y-auto">
-                  <PropertiesPanel selectedComponent={selectedComponent} onUpdate={handleUpdateComponent} />
+                  {descriptionMode === 'builder' ? (
+                     <PropertiesPanel selectedComponent={selectedComponent} onUpdate={handleUpdateComponent} />
+                  ) : (
+                     <Card className="w-full h-full">
+                        <CardHeader>
+                            <CardTitle>HTML Mode</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-muted-foreground">You are in HTML mode. Edit the raw HTML content directly in the main panel.</p>
+                        </CardContent>
+                     </Card>
+                  )}
               </div>
           </div>
         </div>
@@ -555,3 +604,5 @@ export default function PropertyEditPage() {
     </ClientOnly>
   );
 }
+
+    
