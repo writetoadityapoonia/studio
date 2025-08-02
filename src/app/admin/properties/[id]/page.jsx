@@ -953,7 +953,7 @@ export default function PropertyEditPage() {
                                 );
                             }}
                         </CldUploadWidget>
-                        {!CLOUDINARY_UPLOAD_PRESET && (
+                        {(!CLOUDINARY_UPLOAD_PRESET || CLOUDINARY_UPLOAD_PRESET === 'your_upload_preset_name') && (
                             <p className="text-sm text-destructive text-center">Cloudinary upload preset is not configured. Please set NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET in your .env file.</p>
                         )}
                     </CardContent>
