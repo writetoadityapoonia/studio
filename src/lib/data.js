@@ -7,8 +7,8 @@ import { ObjectId } from 'mongodb';
 
 async function getPropertiesCollection() {
     const db = await connectToDatabase();
-    // Ensure 2dsphere index exists on locationPoint
-    // db.collection('properties').createIndex({ locationPoint: '2dsphere' });
+    // Ensure 2dsphere index exists on locationPoint for geo-queries
+    await db.collection('properties').createIndex({ locationPoint: '2dsphere' });
     return db.collection('properties');
 }
 
