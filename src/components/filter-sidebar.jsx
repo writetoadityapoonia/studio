@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 import { SlidersHorizontal } from 'lucide-react';
+import { useDebounce } from '@/hooks/use-debounce';
 
 const PRICE_RANGE = {
   min: 0,
@@ -18,16 +19,22 @@ const PRICE_RANGE = {
   step: 100000, // 1 Lakh
 };
 
+function getInitialFilters(searchParams) {
+    return {
+        type: searchParams.get('type') || '',
+        minPrice: parseInt(searchParams.get('minPrice') || PRICE_RANGE.min, 10),
+        maxPrice: parseInt(searchParams.get('maxPrice') || PRICE_RANGE.max, 10),
+    };
+}
+
+
 export function FilterSidebar({ propertyTypes }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   
   const [isMobile, setIsMobile] = useState(false);
-  const [filters, setFilters] = useState({
-    type: searchParams.get('type') || '',
-    minPrice: searchParams.get('minPrice') || PRICE_RANGE.min,
-    maxPrice: searchParams.get('maxPrice') || PRICE_RANGE.max,
-  });
+  const [filters, setFilters] = useState(() => getInitialFilters(searchParams));
+  const debouncedFilters = useDebounce(filters, 500);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -36,40 +43,65 @@ export function FilterSidebar({ propertyTypes }) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+  useEffect(() => {
+    // Sync state with URL if it changes (e.g., browser back/forward)
+    setFilters(getInitialFilters(searchParams));
+  }, [searchParams]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    
+    // Avoid pushing router state if filters haven't changed
+    const currentType = params.get('type') || '';
+    const currentMinPrice = parseInt(params.get('minPrice') || PRICE_RANGE.min, 10);
+    const currentMaxPrice = parseInt(params.get('maxPrice') || PRICE_RANGE.max, 10);
+
+    if (
+        debouncedFilters.type === currentType &&
+        debouncedFilters.minPrice === currentMinPrice &&
+        debouncedFilters.maxPrice === currentMaxPrice
+    ) {
+        return;
+    }
+    
+    if (debouncedFilters.type) {
+        params.set('type', debouncedFilters.type);
+    } else {
+        params.delete('type');
+    }
+    
+    // Only set price if it's different from the default
+    if (debouncedFilters.minPrice > PRICE_RANGE.min) {
+        params.set('minPrice', debouncedFilters.minPrice.toString());
+    } else {
+        params.delete('minPrice');
+    }
+
+    if (debouncedFilters.maxPrice < PRICE_RANGE.max) {
+        params.set('maxPrice', debouncedFilters.maxPrice.toString());
+    } else {
+        params.delete('maxPrice');
+    }
+    
+    router.push(`/?${params.toString()}`, { scroll: false });
+
+  }, [debouncedFilters, router, searchParams]);
+
+
+  const handleTypeChange = (value) => {
+    setFilters(prev => ({ ...prev, type: value }));
   };
 
   const handlePriceChange = (value) => {
     setFilters(prev => ({ ...prev, minPrice: value[0], maxPrice: value[1] }));
   };
   
-  const applyFilters = () => {
-    const params = new URLSearchParams(searchParams);
-    
-    if (filters.type) {
-        params.set('type', filters.type);
-    } else {
-        params.delete('type');
-    }
-    
-    params.set('minPrice', filters.minPrice);
-    params.set('maxPrice', filters.maxPrice);
-
-    router.push(`/?${params.toString()}`);
-  };
-
   const resetFilters = () => {
-    setFilters({
-        type: '',
-        minPrice: PRICE_RANGE.min,
-        maxPrice: PRICE_RANGE.max,
-    });
-     const params = new URLSearchParams(searchParams);
-     params.delete('type');
-     params.delete('minPrice');
-     params.delete('maxPrice');
-     router.push(`/?${params.toString()}`);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('type');
+    params.delete('minPrice');
+    params.delete('maxPrice');
+    router.push(`/?${params.toString()}`, { scroll: false });
   }
 
   const FilterContent = () => (
@@ -82,12 +114,13 @@ export function FilterSidebar({ propertyTypes }) {
           <Label htmlFor="type-filter">Property Type</Label>
           <Select
             value={filters.type}
-            onValueChange={(value) => handleFilterChange('type', value)}
+            onValueChange={handleTypeChange}
           >
             <SelectTrigger id="type-filter">
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="">All Types</SelectItem>
               {propertyTypes.map((type) => (
                 <SelectItem key={type.id} value={type.name}>{type.name}</SelectItem>
               ))}
@@ -111,8 +144,7 @@ export function FilterSidebar({ propertyTypes }) {
         </div>
 
         <div className="flex flex-col gap-2">
-            <Button onClick={applyFilters}>Apply Filters</Button>
-            <Button onClick={resetFilters} variant="outline">Reset</Button>
+            <Button onClick={resetFilters} variant="outline">Reset Filters</Button>
         </div>
       </CardContent>
     </Card>

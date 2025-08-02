@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useTransition } from 'react';
 import { PropertyList } from '@/components/property-list';
 import { getProperties, getPropertyTypes } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,7 +17,7 @@ function PropertyListSkeleton({ view = 'grid' }) {
     
     return (
         <div className={view === 'list' ? listClass : gridClass}>
-            {[...Array(3)].map((_, i) => (
+            {[...Array(6)].map((_, i) => (
                  <Card key={i} className={`flex ${view === 'list' ? 'flex-row' : 'flex-col'} overflow-hidden`}>
                     <Skeleton className={`flex-shrink-0 ${view === 'list' ? 'w-1/3 h-48' : 'w-full h-56'}`} />
                     <div className="p-4 flex flex-col flex-grow w-full">
@@ -91,18 +91,21 @@ function PageClient({ initialProperties, propertyTypes, searchParams }) {
 }
 
 export default function PropertiesPageWrapper({ searchParams }) {
-    const [initialProperties, setInitialProperties] = useState([]);
+    const [properties, setProperties] = useState([]);
     const [propertyTypes, setPropertyTypes] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    // This key will change whenever searchParams change, forcing a re-render of PageClient
+    const key = JSON.stringify(searchParams);
 
     useEffect(() => {
         async function loadData() {
             setLoading(true);
             const [props, types] = await Promise.all([
-                getProperties({ ...searchParams, limit: 6 }), // Fetch initial page
+                getProperties({ ...searchParams, limit: 6, page: 1 }),
                 getPropertyTypes()
             ]);
-            setInitialProperties(props);
+            setProperties(props);
             setPropertyTypes(types);
             setLoading(false);
         }
@@ -134,7 +137,8 @@ export default function PropertiesPageWrapper({ searchParams }) {
     return (
         <Suspense fallback={<div>Loading...</div>}>
             <PageClient
-                initialProperties={initialProperties}
+                key={key} // Force re-mount on search param change
+                initialProperties={properties}
                 propertyTypes={propertyTypes}
                 searchParams={searchParams}
             />

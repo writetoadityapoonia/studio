@@ -2,36 +2,47 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { PropertyCard } from './property-card';
 import { Button } from './ui/button';
 import { getProperties } from '@/lib/data';
+import { Loader2 } from 'lucide-react';
 
 const PROPERTIES_PER_PAGE = 6;
 
 export function PropertyList({ initialProperties, searchParams = {}, view = 'grid' }) {
   const [properties, setProperties] = useState(initialProperties);
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(initialProperties.length === PROPERTIES_PER_PAGE);
+  const [hasMore, setHasMore] = useState(initialProperties.length >= PROPERTIES_PER_PAGE);
+  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     // When searchParams change, it means filters have been applied.
-    // We need to reset the properties to the new initial set from the server.
+    // Reset the properties to the new initial set from the server.
     setProperties(initialProperties);
     setPage(1);
-    setHasMore(initialProperties.length === PROPERTIES_PER_PAGE);
+    setHasMore(initialProperties.length >= PROPERTIES_PER_PAGE);
   }, [initialProperties]);
 
   const loadMore = async () => {
-    const nextPage = page + 1;
-    // Fetch all properties with the current filters
-    const allFilteredProperties = await getProperties(searchParams);
-    
-    const newProperties = allFilteredProperties.slice(0, nextPage * PROPERTIES_PER_PAGE);
-    
-    setProperties(newProperties);
-    setPage(nextPage);
-    setHasMore(newProperties.length < allFilteredProperties.length);
+    startTransition(async () => {
+        const nextPage = page + 1;
+        
+        const newProperties = await getProperties({
+            ...searchParams,
+            limit: PROPERTIES_PER_PAGE,
+            page: nextPage
+        });
+
+        if (newProperties.length > 0) {
+            setProperties(prev => [...prev, ...newProperties]);
+            setPage(nextPage);
+        }
+
+        if (newProperties.length < PROPERTIES_PER_PAGE) {
+            setHasMore(false);
+        }
+    });
   };
   
   const listClass = "flex flex-col gap-8";
@@ -46,8 +57,8 @@ export function PropertyList({ initialProperties, searchParams = {}, view = 'gri
       </div>
       {hasMore && (
         <div className="text-center mt-12">
-          <Button onClick={loadMore} size="lg">
-            Show More
+          <Button onClick={loadMore} size="lg" disabled={isPending}>
+            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Show More'}
           </Button>
         </div>
       )}
@@ -56,6 +67,7 @@ export function PropertyList({ initialProperties, searchParams = {}, view = 'gri
 }
 
     
+
 
 
 
