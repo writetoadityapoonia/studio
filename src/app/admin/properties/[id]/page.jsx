@@ -788,8 +788,7 @@ export default function PropertyEditPage() {
         }
     }
 
-    const { latitude, longitude, ...restOfProperty } = property;
-    const propertyData = { ...restOfProperty, description: descriptionToSave };
+    const propertyData = { ...property, description: descriptionToSave };
 
     try {
         if (isNew) {
