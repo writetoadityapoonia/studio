@@ -23,3 +23,12 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'maps.googleapis.com',
+        port: '',
+        pathname: '/**',
+      },
+    ],
+  },
+};
+
+module.exports = nextConfig;
