@@ -2,11 +2,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { DndContext, DragOverlay, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { SortableContext, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { DndContext, DragOverlay, useDroppable, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core';
+import { SortableContext, useSortable, arrayMove, rectSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { v4 as uuidv4 } from 'uuid';
-import { Plus, Trash2, Type, RectangleHorizontal, Save, GripVertical, TableIcon, Code, Blocks, Image as ImageIcon, Minus, Divide, Copy, Check } from 'lucide-react';
+import { Plus, Trash2, Type, RectangleHorizontal, Save, GripVertical, TableIcon, Code, Blocks, Image as ImageIcon, Minus, Divide, Copy, Check, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,9 @@ import Image from 'next/image';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { AlignLeft, AlignCenter, AlignRight, Bold, Italic } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { CldUploadWidget } from 'next-cloudinary';
+import { CLOUDINARY_UPLOAD_PRESET } from '@/lib/cloudinary';
+
 
 const AI_PROMPT = `You are an expert real estate copywriter. Your task is to take raw, factual text about a property and transform it into a structured JSON array that can be used by a web application's description builder.
 
@@ -539,6 +542,62 @@ const PropertiesPanel = ({ selectedComponent, onUpdate }) => {
   );
 };
 
+
+const ImageSortableItem = ({ id, children }) => {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="relative group">
+      {children}
+    </div>
+  );
+};
+
+function ImageGrid({ images, onRemove, onReorder }) {
+    const sensors = useSensors(useSensor(PointerSensor));
+
+    function handleDragEnd(event) {
+        const { active, over } = event;
+        if (active.id !== over.id) {
+            const oldIndex = images.findIndex((img) => img === active.id);
+            const newIndex = images.findIndex((img) => img === over.id);
+            onReorder(oldIndex, newIndex);
+        }
+    }
+
+    return (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={images} strategy={rectSortingStrategy}>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+                    {images.map((url) => (
+                        <ImageSortableItem key={url} id={url}>
+                            <div className="relative aspect-square w-full">
+                                <Image
+                                    src={url}
+                                    alt="Property image"
+                                    fill
+                                    className="object-cover rounded-md"
+                                />
+                                <button
+                                    onClick={() => onRemove(url)}
+                                    className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-70 hover:opacity-100 transition-opacity"
+                                >
+                                    <Trash2 className="w-3 h-3" />
+                                </button>
+                                <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+                                <GripVertical className="absolute bottom-1 right-1 text-white w-4 h-4 cursor-grab" />
+                            </div>
+                        </ImageSortableItem>
+                    ))}
+                </div>
+            </SortableContext>
+        </DndContext>
+    );
+}
+
 export default function PropertyEditPage() {
   const router = useRouter();
   const params = useParams();
@@ -555,7 +614,7 @@ export default function PropertyEditPage() {
       bedrooms: 0,
       bathrooms: 0,
       area: 0,
-      images: ['https://placehold.co/600x400.png'],
+      images: [],
       description: '',
   });
   const [components, setComponents] = useState([]);
@@ -575,6 +634,7 @@ export default function PropertyEditPage() {
         if (existingProperty) {
           setProperty({
             ...existingProperty,
+            images: existingProperty.images || [],
             price: existingProperty.price ?? 0,
             bedrooms: existingProperty.bedrooms ?? 0,
             bathrooms: existingProperty.bathrooms ?? 0,
@@ -596,7 +656,7 @@ export default function PropertyEditPage() {
     } else {
         const initialComponents = parseDescription('');
         setComponents(initialComponents);
-        setProperty(prev => ({...prev, description: JSON.stringify(initialComponents)}));
+        setProperty(p => ({...p, description: JSON.stringify(initialComponents)}));
     }
   }, [id, isNew, router, toast]);
 
@@ -765,6 +825,29 @@ export default function PropertyEditPage() {
     }
   }
 
+  const handleImageUpload = (result) => {
+      if (result.event === 'success') {
+          setProperty(prev => ({
+              ...prev,
+              images: [...prev.images, result.info.secure_url]
+          }));
+      }
+  };
+
+  const handleRemoveImage = (url) => {
+      setProperty(prev => ({
+          ...prev,
+          images: prev.images.filter(img => img !== url)
+      }));
+  };
+
+  const handleReorderImages = (oldIndex, newIndex) => {
+      setProperty(prev => ({
+          ...prev,
+          images: arrayMove(prev.images, oldIndex, newIndex)
+      }));
+  };
+
   const activeComponentType = activeId && activeId.toString().startsWith('toolbox-') ? activeId.toString().split('-')[1] : null;
   
   if (loading && !isNew) {
@@ -848,6 +931,34 @@ export default function PropertyEditPage() {
                           </div>
                      </CardContent>
                  </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Property Images</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <ImageGrid images={property.images} onRemove={handleRemoveImage} onReorder={handleReorderImages} />
+                        <CldUploadWidget uploadPreset={CLOUDINARY_UPLOAD_PRESET} onUpload={handleImageUpload}
+                        >
+                            {({ open }) => {
+                                function handleOnClick(e) {
+                                    e.preventDefault();
+                                    open();
+                                }
+                                return (
+                                    <Button type="button" variant="outline" onClick={handleOnClick} className="w-full">
+                                        <UploadCloud className="mr-2" />
+                                        Upload an Image
+                                    </Button>
+                                );
+                            }}
+                        </CldUploadWidget>
+                        {!CLOUDINARY_UPLOAD_PRESET && (
+                            <p className="text-sm text-destructive text-center">Cloudinary upload preset is not configured. Please set NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET in your .env file.</p>
+                        )}
+                    </CardContent>
+                </Card>
+
 
                    <div className="flex-grow flex flex-col">
                       <div className="flex justify-between items-center mb-4">
