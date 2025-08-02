@@ -828,12 +828,10 @@ export default function PropertyEditPage() {
   }
 
   const handleImageUpload = (result) => {
-      if (result.event === 'success') {
-          setProperty(prev => ({
-              ...prev,
-              images: [...prev.images, result.info.secure_url]
-          }));
-      }
+      setProperty(prev => ({
+          ...prev,
+          images: [...prev.images, result.info.secure_url]
+      }));
   };
 
   const handleRemoveImage = (url) => {
@@ -943,7 +941,7 @@ export default function PropertyEditPage() {
                         <CldUploadWidget 
                           cloudName={CLOUDINARY_CLOUD_NAME}
                           uploadPreset={CLOUDINARY_UPLOAD_PRESET} 
-                          onUpload={handleImageUpload}
+                          onSuccess={handleImageUpload}
                         >
                             {({ open }) => {
                                 function handleOnClick(e) {
