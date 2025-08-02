@@ -1,7 +1,8 @@
 
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PropertyList } from '@/components/property-list';
 import { getProperties, getPropertyTypes } from '@/lib/data';
 import { Suspense } from 'react';
