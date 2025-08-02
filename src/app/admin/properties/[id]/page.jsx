@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -27,6 +26,7 @@ import { AlignLeft, AlignCenter, AlignRight, Bold, Italic } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { CldUploadWidget } from 'next-cloudinary';
 import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '@/lib/cloudinary';
+import Autocomplete from 'react-google-autocomplete';
 
 
 const AI_PROMPT = `You are an expert real estate copywriter. Your task is to take raw, factual text about a property and transform it into a structured JSON array that can be used by a web application's description builder.
@@ -599,7 +599,10 @@ const ImageSortableItemWrapper = ({ id, onRemove, children }) => {
         <div ref={setNodeRef} style={style} className="relative aspect-square w-full group">
              {children}
             <button
-                onClick={() => onRemove(id)}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove(id);
+                }}
                 className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"
             >
                 <Trash2 className="w-3 h-3" />
@@ -623,6 +626,8 @@ export default function PropertyEditPage() {
   const [property, setProperty] = useState({
       title: '',
       location: '',
+      latitude: null,
+      longitude: null,
       developer: '',
       price: 0,
       type: '',
@@ -641,6 +646,7 @@ export default function PropertyEditPage() {
   const [showBedsBaths, setShowBedsBaths] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor));
   
+  const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const isCloudinaryConfigured = CLOUDINARY_CLOUD_NAME && CLOUDINARY_CLOUD_NAME !== 'your_cloud_name' && CLOUDINARY_UPLOAD_PRESET && CLOUDINARY_UPLOAD_PRESET !== 'your_upload_preset_name';
 
   useEffect(() => {
@@ -862,6 +868,19 @@ export default function PropertyEditPage() {
           images: arrayMove(prev.images, oldIndex, newIndex)
       }));
   };
+  
+  const handlePlaceSelected = (place) => {
+    if (place.geometry) {
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+        setProperty(prev => ({
+            ...prev,
+            location: place.formatted_address,
+            latitude: lat,
+            longitude: lng,
+        }));
+    }
+  };
 
   const activeComponentType = activeId && activeId.toString().startsWith('toolbox-') ? activeId.toString().split('-')[1] : null;
   
@@ -899,8 +918,25 @@ export default function PropertyEditPage() {
                               <Input id="title" name="title" value={property.title || ''} onChange={handleInputChange} />
                           </div>
                            <div className="space-y-2">
-                              <Label htmlFor="location">Location</Label>
-                              <Input id="location" name="location" value={property.location || ''} onChange={handleInputChange} />
+                              <Label htmlFor="location">Location Search</Label>
+                              {GOOGLE_MAPS_API_KEY ? (
+                                <Autocomplete
+                                    apiKey={GOOGLE_MAPS_API_KEY}
+                                    onPlaceSelected={handlePlaceSelected}
+                                    options={{ types: ["geocode"] }}
+                                    defaultValue={property.location || ''}
+                                    className={cn(
+                                      "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                                    )}
+                                />
+                               ) : (
+                                 <Input id="location" name="location" value={property.location || ''} onChange={handleInputChange} />
+                               )}
+                                 {property.latitude && property.longitude && (
+                                     <div className="mt-2 text-sm text-muted-foreground">
+                                         Lat: {property.latitude.toFixed(4)}, Lng: {property.longitude.toFixed(4)}
+                                     </div>
+                                 )}
                           </div>
                            <div className="space-y-2">
                               <Label htmlFor="developer">Developer</Label>
@@ -1040,5 +1076,3 @@ export default function PropertyEditPage() {
     </ClientOnly>
   );
 }
-
-    

@@ -17,6 +17,13 @@ export default async function PropertyPage({ params }) {
     notFound();
   }
 
+  const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const hasCoordinates = property.latitude && property.longitude;
+  const mapSrc = GOOGLE_MAPS_API_KEY && hasCoordinates 
+    ? `https://maps.googleapis.com/maps/api/staticmap?center=${property.latitude},${property.longitude}&zoom=15&size=600x400&maptype=roadmap&markers=color:red%7C${property.latitude},${property.longitude}&key=${GOOGLE_MAPS_API_KEY}`
+    : 'https://placehold.co/600x400.png';
+
+
   return (
     <div className="container mx-auto py-12 px-4">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -53,10 +60,10 @@ export default async function PropertyPage({ params }) {
         </div>
         
         <div className="lg:col-span-1">
-            <div className="sticky top-24 p-6 bg-card rounded-lg border">
-                <h2 className="text-3xl font-bold text-primary mb-4">{formatCurrency(property.price, 'INR')}</h2>
+            <div className="sticky top-24 p-6 bg-card rounded-lg border space-y-6">
+                <h2 className="text-3xl font-bold text-primary">{formatCurrency(property.price, 'INR')}</h2>
                 
-                <div className="grid grid-cols-2 gap-4 text-lg mb-6">
+                <div className="grid grid-cols-2 gap-4 text-lg">
                     {property.bedrooms > 0 && (
                         <div className="flex items-center gap-2">
                             <BedDouble className="w-6 h-6 text-primary"/>
@@ -88,9 +95,19 @@ export default async function PropertyPage({ params }) {
                 </div>
 
                 <EnquiryForm propertyId={property.id} />
+
+                <div>
+                    <h3 className="font-bold text-lg mb-2">Location</h3>
+                    <div className="aspect-video w-full">
+                         <Image 
+                            src={mapSrc}
+                            alt={`Map of ${property.title}`}
+                            width={600}
+                            height={400}
+                            className="w-full h-full object-cover rounded-lg"
+                            data-ai-hint="map location"
+                        />
+                    </div>
+                </div>
             </div>
         </div>
-      </div>
-    </div>
-  );
-}
