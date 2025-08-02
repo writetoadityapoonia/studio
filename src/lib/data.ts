@@ -1,7 +1,8 @@
+
 'use server';
 
 import { connectToDatabase } from './mongodb';
-import type { Property, Enquiry, EnquiryWithPropertyInfo } from './types';
+import type { Property, Enquiry, EnquiryWithPropertyInfo, PropertyType } from './types';
 import { ObjectId } from 'mongodb';
 
 async function getPropertiesCollection() {
@@ -12,6 +13,11 @@ async function getPropertiesCollection() {
 async function getEnquiriesCollection() {
     const db = await connectToDatabase();
     return db.collection('enquiries');
+}
+
+async function getPropertyTypesCollection() {
+    const db = await connectToDatabase();
+    return db.collection('property_types');
 }
 
 function processDocument(doc: any) {
@@ -85,3 +91,11 @@ export async function getAllEnquiriesWithPropertyInfo(): Promise<EnquiryWithProp
 
     return enquiries as EnquiryWithPropertyInfo[];
 }
+
+export async function getPropertyTypes(): Promise<PropertyType[]> {
+  const collection = await getPropertyTypesCollection();
+  const types = await collection.find({}).sort({ name: 1 }).toArray();
+  return types.map(t => processDocument(t) as PropertyType);
+}
+
+    

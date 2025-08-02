@@ -1,8 +1,9 @@
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
 import { connectToDatabase } from './mongodb';
-import type { Property, Enquiry } from './types';
+import type { Property, Enquiry, PropertyType } from './types';
 import { ObjectId } from 'mongodb';
 
 async function getPropertiesCollection() {
@@ -13,6 +14,11 @@ async function getPropertiesCollection() {
 async function getEnquiriesCollection() {
     const db = await connectToDatabase();
     return db.collection('enquiries');
+}
+
+async function getPropertyTypesCollection() {
+    const db = await connectToDatabase();
+    return db.collection('property_types');
 }
 
 
@@ -73,3 +79,35 @@ export async function createEnquiry(enquiryData: Omit<Enquiry, 'id' | 'createdAt
     // Revalidate the admin page for the property to show the new enquiry
     revalidatePath(`/admin/properties/${enquiryData.propertyId}`);
 }
+
+
+export async function createPropertyType(typeData: { name: string }) {
+    const collection = await getPropertyTypesCollection();
+    // Check if a type with the same name already exists to prevent duplicates
+    const existingType = await collection.findOne({ name: typeData.name });
+    if (existingType) {
+        throw new Error(`A property type with the name "${typeData.name}" already exists.`);
+    }
+    const result = await collection.insertOne(typeData);
+    if (!result.insertedId) {
+        throw new Error('Failed to create property type');
+    }
+    revalidatePath('/admin/settings');
+    revalidatePath('/admin/properties/*');
+}
+
+export async function deletePropertyType(id: string) {
+    if (!ObjectId.isValid(id)) {
+        throw new Error("Invalid ID format");
+    }
+    const collection = await getPropertyTypesCollection();
+    const result = await collection.deleteOne({ _id: new ObjectId(id) });
+
+    if (result.deletedCount === 0) {
+        throw new Error("Property type not found");
+    }
+    revalidatePath('/admin/settings');
+    revalidatePath('/admin/properties/*');
+}
+
+    

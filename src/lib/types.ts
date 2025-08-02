@@ -1,4 +1,5 @@
 
+
 export interface Property {
   id: string;
   title: string;
@@ -28,3 +29,10 @@ export interface EnquiryWithPropertyInfo extends Omit<Enquiry, 'propertyId'> {
         title: string;
     }
 }
+
+export interface PropertyType {
+    id: string;
+    name: string;
+}
+
+    

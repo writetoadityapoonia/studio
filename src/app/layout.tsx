@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
@@ -7,7 +8,7 @@ import { ProgressProvider } from '@/components/progress-provider';
 
 
 export const metadata: Metadata = {
-  title: 'Frnz Estates',
+  title: 'Only Frnz',
   description: 'The best properties, curated for you.',
   icons: {},
 };
@@ -45,7 +46,7 @@ function Footer() {
   return (
     <footer className="py-6 px-4 md:px-6 border-t bg-background">
       <div className="container mx-auto flex flex-col items-center justify-between gap-4 sm:flex-row">
-        <p className="text-sm text-muted-foreground">&copy; 2024 Frnz Estates. All rights reserved.</p>
+        <p className="text-sm text-muted-foreground">&copy; 2024 Only Frnz. All rights reserved.</p>
         <nav className="flex gap-4 sm:gap-6">
           <a className="text-sm hover:underline" href="#">
             Terms of Service
@@ -58,3 +59,5 @@ function Footer() {
     </footer>
   );
 }
+
+    

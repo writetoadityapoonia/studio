@@ -15,8 +15,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { createProperty, updateProperty } from '@/lib/actions';
-import { getPropertyById } from '@/lib/data';
-import type { Property } from '@/lib/types';
+import { getPropertyById, getPropertyTypes } from '@/lib/data';
+import type { Property, PropertyType as PropertyTypeModel } from '@/lib/types';
 import { useRouter, useParams } from 'next/navigation';
 import { Toolbox, BuilderComponent, TextSize, TableComponent, parseDescription, TextColor, TextStyle, ButtonVariant, ButtonSize, SpacerSize } from '@/components/builder-elements';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -554,7 +554,7 @@ export default function PropertyEditPage() {
       location: '',
       developer: '',
       price: 0,
-      type: 'Apartment',
+      type: '',
       bedrooms: 0,
       bathrooms: 0,
       area: 0,
@@ -562,6 +562,7 @@ export default function PropertyEditPage() {
       description: '',
   });
   const [components, setComponents] = useState<BuilderComponent[]>([]);
+  const [propertyTypes, setPropertyTypes] = useState<PropertyTypeModel[]>([]);
   const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(!isNew);
@@ -570,6 +571,8 @@ export default function PropertyEditPage() {
   const sensors = useSensors(useSensor(PointerSensor));
 
   useEffect(() => {
+    getPropertyTypes().then(setPropert-yTypes);
+
     if (!isNew && id) {
       getPropertyById(id).then(existingProperty => {
         if (existingProperty) {
@@ -580,6 +583,7 @@ export default function PropertyEditPage() {
             bathrooms: existingProperty.bathrooms ?? 0,
             area: existingProperty.area ?? 0,
             developer: existingProperty.developer ?? '',
+            type: existingProperty.type ?? ''
           });
           if (existingProperty.bedrooms > 0 || existingProperty.bathrooms > 0) {
             setShowBedsBaths(true);
@@ -813,7 +817,19 @@ export default function PropertyEditPage() {
                           </div>
                            <div className="space-y-2">
                               <Label htmlFor="type">Type</Label>
-                              <Input id="type" name="type" value={property.type || ''} onChange={handleInputChange} />
+                              <Select 
+                                value={property.type || ''} 
+                                onValueChange={(value) => setProperty(prev => ({ ...prev, type: value }))}
+                              >
+                                <SelectTrigger id="type">
+                                    <SelectValue placeholder="Select a property type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {propertyTypes.map(type => (
+                                        <SelectItem key={type.id} value={type.name}>{type.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
                           </div>
                           
                           {showBedsBaths && (
@@ -896,3 +912,5 @@ export default function PropertyEditPage() {
     </ClientOnly>
   );
 }
+
+    
