@@ -30,7 +30,7 @@ export default async function PropertyPage({ params }) {
         <div className="lg:col-span-2">
           <Carousel className="w-full mb-8">
             <CarouselContent>
-              {property.images.map((src, index) => (
+              {(property.images || []).map((src, index) => (
                 <CarouselItem key={index}>
                   <Image
                     src={src}

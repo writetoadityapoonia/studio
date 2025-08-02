@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -215,7 +216,7 @@ const Canvas = ({ components, setComponents, selectedComponentId, setSelectedCom
   const { setNodeRef, isOver } = useDroppable({ id: 'canvas' });
 
   return (
-    <SortableContext items={components.map(c => c.id)}>
+    <SortableContext items={components.map(c => c.id)} strategy={rectSortingStrategy}>
       <div ref={setNodeRef} id="canvas" className={cn("w-full h-full bg-muted/30 rounded-lg p-8 space-y-2 overflow-y-auto", {"bg-primary/10": isOver})}>
         {components.length > 0 ? (
           components.map(component => (
@@ -851,7 +852,7 @@ export default function PropertyEditPage() {
   const handleImageUpload = (result) => {
       setProperty(prev => ({
           ...prev,
-          images: [...prev.images, result.info.secure_url]
+          images: [...(prev.images || []), result.info.secure_url]
       }));
   };
 
@@ -988,7 +989,7 @@ export default function PropertyEditPage() {
                         <CardTitle>Property Images</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <ImageGrid images={property.images} onRemove={handleRemoveImage} onReorder={handleReorderImages} />
+                        <ImageGrid images={property.images || []} onRemove={handleRemoveImage} onReorder={handleReorderImages} />
                         <CldUploadWidget 
                           cloudName={CLOUDINARY_CLOUD_NAME}
                           uploadPreset={CLOUDINARY_UPLOAD_PRESET} 
