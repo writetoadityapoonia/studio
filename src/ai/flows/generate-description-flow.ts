@@ -1,129 +1,68 @@
-
-'use server';
-
-/**
- * @fileOverview An AI flow to generate a structured property description
- * from unstructured plain text.
- */
-import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
-import {
-  BuilderComponent,
-  TextComponent,
-  ButtonComponent,
-  TableComponent,
-  ImageComponent,
-  SpacerComponent,
-  DividerComponent,
-} from '@/components/builder-elements';
-import { v4 as uuidv4 } from 'uuid';
-
-// Define the Zod schemas for each component type.
-// These schemas match the types in builder-elements.tsx.
-const TextComponentSchema = z.object({
-  type: z.literal('Text'),
-  text: z.string(),
-  size: z.enum(['sm', 'md', 'lg', 'xl']).default('md'),
-  align: z.enum(['left', 'center', 'right']).default('left'),
-  color: z.enum(['default', 'primary', 'muted']).default('default'),
-  style: z.array(z.enum(['bold', 'italic'])).default([]),
-});
-
-const ButtonComponentSchema = z.object({
-  type: z.literal('Button'),
-  text: z.string(),
-  href: z.string().default(''),
-  variant: z.enum(['default', 'destructive', 'outline', 'secondary', 'ghost', 'link']).default('default'),
-  size: z.enum(['default', 'sm', 'lg', 'icon']).default('default'),
-});
-
-const TableComponentSchema = z.object({
-  type: z.literal('Table'),
-  headers: z.array(z.string()),
-  rows: z.array(z.array(z.string())),
-});
-
-const ImageComponentSchema = z.object({
-  type: z.literal('Image'),
-  src: z.string(),
-  alt: z.string(),
-});
-
-const SpacerComponentSchema = z.object({
-    type: z.literal('Spacer'),
-    size: z.enum(['sm', 'md', 'lg']).default('md'),
-});
-
-const DividerComponentSchema = z.object({
-    type: z.literal('Divider'),
-});
-
-
-// A discriminated union allows the AI to choose which component type to use.
-const BuilderComponentSchema = z.discriminatedUnion('type', [
-  TextComponentSchema,
-  ButtonComponentSchema,
-  TableComponentSchema,
-  ImageComponentSchema,
-  SpacerComponentSchema,
-  DividerComponentSchema
-]);
-
-// Define the input and output schemas for the flow.
-export const GenerateDescriptionInputSchema = z.string();
-export const GenerateDescriptionOutputSchema = z.object({
-  components: z.array(BuilderComponentSchema),
-});
-
-export type GenerateDescriptionInput = z.infer<typeof GenerateDescriptionInputSchema>;
-export type GenerateDescriptionOutput = z.infer<typeof GenerateDescriptionOutputSchema>;
-
-
-// The main prompt for the AI model.
-const prompt = ai.definePrompt({
-  name: 'generateDescriptionPrompt',
-  input: { schema: GenerateDescriptionInputSchema },
-  output: { schema: GenerateDescriptionOutputSchema },
-  prompt: `
-    You are an expert real estate content structurer. Your task is to take a raw text block
-    about a property and convert it into a structured array of components based on the
-    provided schemas.
-
-    Analyze the text and break it down into logical blocks: paragraphs, headings, tables, etc.
-    For each block, create the most appropriate component object.
-
-    - Use 'Text' components for paragraphs and headings. Use different sizes for headings vs. body text.
-    - Use 'Table' components for tabular data. Identify the headers and rows correctly.
-    - If you see lists of features or amenities, format them as a 'Text' component with clear formatting.
-    - Do not invent any information. All content must come from the source text.
-
-    Here is the raw text to process:
-    {{{prompt}}}
-  `,
-});
-
-// Define the Genkit flow.
-const generateDescriptionFlow = ai.defineFlow(
-  {
-    name: 'generateDescriptionFlow',
-    inputSchema: GenerateDescriptionInputSchema,
-    outputSchema: GenerateDescriptionOutputSchema,
+{
+  "name": "nextn",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack -p 9002",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
   },
-  async (text) => {
-    const { output } = await prompt(text);
-    if (!output) {
-      throw new Error('AI failed to generate a structured description.');
-    }
-    // Add unique IDs to each component, as this is required by the builder UI.
-    const componentsWithIds = output.components.map((c) => ({ ...c, id: uuidv4() }));
-    return { components: componentsWithIds as BuilderComponent[] };
+  "dependencies": {
+    "@dnd-kit/core": "^6.1.0",
+    "@dnd-kit/sortable": "^8.0.0",
+    "@hookform/resolvers": "^4.1.3",
+    "@radix-ui/react-accordion": "^1.2.3",
+    "@radix-ui/react-alert-dialog": "^1.1.6",
+    "@radix-ui/react-avatar": "^1.1.3",
+    "@radix-ui/react-checkbox": "^1.1.4",
+    "@radix-ui/react-collapsible": "^1.1.11",
+    "@radix-ui/react-dialog": "^1.1.6",
+    "@radix-ui/react-dropdown-menu": "^2.1.6",
+    "@radix-ui/react-label": "^2.1.2",
+    "@radix-ui/react-menubar": "^1.1.6",
+    "@radix-ui/react-popover": "^1.1.6",
+    "@radix-ui/react-progress": "^1.1.2",
+    "@radix-ui/react-radio-group": "^1.2.3",
+    "@radix-ui/react-scroll-area": "^1.2.3",
+    "@radix-ui/react-select": "^2.1.6",
+    "@radix-ui/react-separator": "^1.1.2",
+    "@radix-ui/react-slider": "^1.2.3",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-switch": "^1.1.3",
+    "@radix-ui/react-tabs": "^1.1.3",
+    "@radix-ui/react-toast": "^1.2.6",
+    "@radix-ui/react-toggle": "^1.1.0",
+    "@radix-ui/react-toggle-group": "^1.1.0",
+    "@radix-ui/react-tooltip": "^1.1.8",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
+    "embla-carousel-react": "^8.6.0",
+    "firebase": "^11.9.1",
+    "lucide-react": "^0.475.0",
+    "mongodb": "^6.8.0",
+    "next": "15.3.3",
+    "next-nprogress-bar": "^2.3.12",
+    "patch-package": "^8.0.0",
+    "react": "^18.3.1",
+    "react-day-picker": "^8.10.1",
+    "react-dom": "^18.3.1",
+    "react-google-autocomplete": "^2.7.3",
+    "react-hook-form": "^7.54.2",
+    "recharts": "^2.15.1",
+    "tailwind-merge": "^3.0.1",
+    "tailwindcss-animate": "^1.0.7",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@types/uuid": "^9.0.8",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
   }
-);
-
-
-// Export a wrapper function to be called from the client-side code.
-export async function generateDescription(
-  input: GenerateDescriptionInput
-): Promise<GenerateDescriptionOutput> {
-  return await generateDescriptionFlow(input);
 }
