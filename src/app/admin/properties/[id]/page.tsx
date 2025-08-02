@@ -6,7 +6,7 @@ import { DndContext, DragEndEvent, DragOverlay, useDroppable, PointerSensor, use
 import { SortableContext, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { v4 as uuidv4 } from 'uuid';
-import { Plus, Trash2, Type, RectangleHorizontal, Save, GripVertical, TableIcon, Sparkles, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Type, RectangleHorizontal, Save, GripVertical, TableIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,11 +18,9 @@ import { createProperty, updateProperty } from '@/lib/actions';
 import { getPropertyById } from '@/lib/data';
 import type { Property } from '@/lib/types';
 import { useRouter, useParams } from 'next/navigation';
-import { Toolbox, BuilderComponent, componentToHtml, generateInitialComponents, TextSize, TableComponent } from '@/components/builder-elements';
+import { Toolbox, BuilderComponent, componentToHtml, generateInitialComponents, TextSize } from '@/components/builder-elements';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ClientOnly } from '@/components/client-only';
-import { generatePropertyDetails } from '@/ai/flows/generate-property-details';
-import type { GeneratePropertyDetailsOutput } from '@/ai/flows/schemas';
 
 
 function SortableItem({ id, children }: { id: string; children: React.ReactNode }) {
@@ -125,7 +123,7 @@ const Canvas = ({ components, setComponents, selectedComponentId, setSelectedCom
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
             <Plus className="w-12 h-12 mb-4" />
-            <p>Drag elements from the toolbox here or use the AI generator.</p>
+            <p>Drag elements from the toolbox here.</p>
           </div>
         )}
       </div>
@@ -305,9 +303,6 @@ export default function PropertyEditPage() {
   const [loading, setLoading] = useState(!isNew);
   const sensors = useSensors(useSensor(PointerSensor));
 
-  const [aiContent, setAiContent] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-
   useEffect(() => {
     if (!isNew && id) {
       getPropertyById(id).then(existingProperty => {
@@ -418,56 +413,6 @@ export default function PropertyEditPage() {
       }));
   };
 
-    const handleGenerate = async () => {
-        if (!aiContent) {
-            toast({ title: "Content is empty", description: "Please paste some content to generate details.", variant: "destructive" });
-            return;
-        }
-        setIsGenerating(true);
-        try {
-            const result: GeneratePropertyDetailsOutput = await generatePropertyDetails({ rawText: aiContent });
-
-            setProperty(prev => ({
-                ...prev,
-                title: result.title,
-                location: result.location,
-                price: result.price,
-                type: result.type,
-                bedrooms: result.bedrooms,
-                bathrooms: result.bathrooms,
-                area: result.area,
-            }));
-            
-            const newComponents: BuilderComponent[] = result.description.map(item => {
-                if(item.type === 'Table') {
-                     const tableComp: TableComponent = {
-                        id: uuidv4(),
-                        type: 'Table',
-                        headers: item.data.headers,
-                        rows: item.data.rows
-                    }
-                    return tableComp;
-                }
-                // Default to text for now
-                return {
-                    id: uuidv4(),
-                    type: 'Text',
-                    text: item.data as string,
-                    size: 'md'
-                }
-            })
-            setComponents(newComponents);
-
-            toast({ title: "Generation Complete!", description: "The property details have been filled in." });
-
-        } catch (error) {
-            toast({ title: "AI Generation Failed", description: "Could not generate details from the provided text.", variant: "destructive" });
-        } finally {
-            setIsGenerating(false);
-        }
-    };
-
-
   const activeComponentType = activeId && activeId.toString().startsWith('toolbox-') ? activeId.toString().split('-')[1] as BuilderComponent['type'] : null;
   
   if (loading && !isNew) {
@@ -489,27 +434,6 @@ export default function PropertyEditPage() {
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] flex-grow overflow-hidden">
               {/* Main Edit Area */}
               <div className="flex flex-col overflow-y-auto">
-                   {/* AI Generator */}
-                   <div className="p-6 border-b">
-                     <Card>
-                         <CardHeader><CardTitle className="flex items-center gap-2"><Sparkles className="text-primary"/> AI Content Generator</CardTitle></CardHeader>
-                         <CardContent className="space-y-4">
-                            <Textarea 
-                                placeholder="Paste the raw property description here. Include details like address, price, number of beds/baths, square footage, amenities, and a general description."
-                                className="min-h-[150px]"
-                                value={aiContent}
-                                onChange={(e) => setAiContent(e.target.value)}
-                                disabled={isGenerating}
-                            />
-                            <Button onClick={handleGenerate} disabled={isGenerating}>
-                                {isGenerating ? <Loader2 className="mr-2 animate-spin"/> : <Sparkles className="mr-2" />}
-                                Generate & Fill Form
-                            </Button>
-                         </CardContent>
-                     </Card>
-                  </div>
-
-
                   {/* Property Details Form */}
                   <div className="p-6 border-b">
                      <Card>
