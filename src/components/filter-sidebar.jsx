@@ -88,7 +88,6 @@ export function FilterSidebar({ propertyTypes }) {
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Types</SelectItem>
               {propertyTypes.map((type) => (
                 <SelectItem key={type.id} value={type.name}>{type.name}</SelectItem>
               ))}
