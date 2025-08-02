@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { connectToDatabase } from './mongodb';
@@ -6,6 +7,8 @@ import { ObjectId } from 'mongodb';
 
 async function getPropertiesCollection() {
     const db = await connectToDatabase();
+    // Ensure 2dsphere index exists on locationPoint
+    // db.collection('properties').createIndex({ locationPoint: '2dsphere' });
     return db.collection('properties');
 }
 
@@ -26,9 +29,32 @@ function processDocument(doc) {
 }
 
 
-export async function getProperties() {
+export async function getProperties(searchParams = {}) {
+  const { lat, lng } = searchParams;
   const collection = await getPropertiesCollection();
-  const properties = await collection.find({}).sort({ _id: -1 }).toArray();
+  
+  let query = {};
+  if (lat && lng) {
+      const latitude = parseFloat(lat);
+      const longitude = parseFloat(lng);
+      const radiusInMeters = 15 * 1000; // 15km
+
+      if (!isNaN(latitude) && !isNaN(longitude)) {
+        query = {
+            locationPoint: {
+                $near: {
+                    $geometry: {
+                        type: "Point",
+                        coordinates: [longitude, latitude]
+                    },
+                    $maxDistance: radiusInMeters
+                }
+            }
+        };
+      }
+  }
+  
+  const properties = await collection.find(query).sort({ _id: -1 }).toArray();
   return properties.map(p => processDocument(p));
 }
 
@@ -96,3 +122,5 @@ export async function getPropertyTypes() {
   const types = await collection.find({}).sort({ name: 1 }).toArray();
   return types.map(t => processDocument(t));
 }
+
+    

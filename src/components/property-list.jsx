@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -8,7 +9,7 @@ import { getProperties } from '@/lib/data';
 
 const PROPERTIES_PER_PAGE = 6;
 
-export function PropertyList({ initialProperties }) {
+export function PropertyList({ initialProperties, searchParams = {} }) {
   const [properties, setProperties] = useState([]);
   const [loadedCount, setLoadedCount] = useState(PROPERTIES_PER_PAGE);
   const [hasMore, setHasMore] = useState(true);
@@ -20,8 +21,9 @@ export function PropertyList({ initialProperties }) {
   }, [initialProperties]);
 
   const loadMore = async () => {
-    // Fetch all properties again to get the latest data
-    const allProperties = await getProperties();
+    const { lat, lng } = searchParams;
+    // Fetch all properties again to get the latest data with the same search params
+    const allProperties = await getProperties({ lat, lng });
     const nextLoadedCount = loadedCount + PROPERTIES_PER_PAGE;
     setProperties(allProperties.slice(0, nextLoadedCount));
     setLoadedCount(nextLoadedCount);
@@ -45,3 +47,5 @@ export function PropertyList({ initialProperties }) {
     </>
   );
 }
+
+    

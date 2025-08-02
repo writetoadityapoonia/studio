@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -627,8 +628,7 @@ export default function PropertyEditPage() {
   const [property, setProperty] = useState({
       title: '',
       location: '',
-      latitude: null,
-      longitude: null,
+      locationPoint: null,
       developer: '',
       price: 0,
       type: '',
@@ -781,7 +781,8 @@ export default function PropertyEditPage() {
         }
     }
 
-    const propertyData = { ...property, description: descriptionToSave };
+    const { latitude, longitude, ...restOfProperty } = property;
+    const propertyData = { ...restOfProperty, description: descriptionToSave };
 
     try {
         if (isNew) {
@@ -877,8 +878,10 @@ export default function PropertyEditPage() {
         setProperty(prev => ({
             ...prev,
             location: place.formatted_address,
-            latitude: lat,
-            longitude: lng,
+            locationPoint: {
+                type: 'Point',
+                coordinates: [lng, lat],
+            }
         }));
     }
   };
@@ -933,9 +936,9 @@ export default function PropertyEditPage() {
                                ) : (
                                  <Input id="location" name="location" value={property.location || ''} onChange={handleInputChange} />
                                )}
-                                 {property.latitude && property.longitude && (
+                                 {property.locationPoint?.coordinates && (
                                      <div className="mt-2 text-sm text-muted-foreground">
-                                         Lat: {property.latitude.toFixed(4)}, Lng: {property.longitude.toFixed(4)}
+                                         Lat: {property.locationPoint.coordinates[1].toFixed(4)}, Lng: {property.locationPoint.coordinates[0].toFixed(4)}
                                      </div>
                                  )}
                           </div>
@@ -1077,3 +1080,5 @@ export default function PropertyEditPage() {
     </ClientOnly>
   );
 }
+
+    

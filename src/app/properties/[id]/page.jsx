@@ -1,4 +1,5 @@
 
+
 import { getPropertyById } from '@/lib/data';
 import { notFound } from 'next/navigation';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
@@ -18,9 +19,9 @@ export default async function PropertyPage({ params }) {
   }
 
   const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  const hasCoordinates = property.latitude && property.longitude;
+  const hasCoordinates = property.locationPoint?.coordinates;
   const mapSrc = GOOGLE_MAPS_API_KEY && hasCoordinates 
-    ? `https://maps.googleapis.com/maps/api/staticmap?center=${property.latitude},${property.longitude}&zoom=15&size=600x400&maptype=roadmap&markers=color:red%7C${property.latitude},${property.longitude}&key=${GOOGLE_MAPS_API_KEY}`
+    ? `https://maps.googleapis.com/maps/api/staticmap?center=${property.locationPoint.coordinates[1]},${property.locationPoint.coordinates[0]}&zoom=15&size=600x400&maptype=roadmap&markers=color:red%7C${property.locationPoint.coordinates[1]},${property.locationPoint.coordinates[0]}&key=${GOOGLE_MAPS_API_KEY}`
     : 'https://placehold.co/600x400.png';
 
 
@@ -115,3 +116,5 @@ export default async function PropertyPage({ params }) {
     </div>
   );
 }
+
+    
