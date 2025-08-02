@@ -60,22 +60,22 @@ export const componentToHtml = (components: BuilderComponent[]): string => {
     
     const resizeScript = `
         <script>
-            const sendHeight = () => {
-                // Add a small buffer for safety
-                const height = document.documentElement.scrollHeight + 5;
+            function sendHeight() {
+                // Use offsetHeight for a more reliable measurement
+                const height = document.body.offsetHeight;
                 window.parent.postMessage({ type: 'iframe-resize', height: height }, '*');
-            };
-            
-            // Send height on load
+            }
+
+            // Send height on initial load
             window.addEventListener('load', sendHeight);
 
-            // Send height on mutations
+            // Also send height on mutations
             const observer = new MutationObserver(sendHeight);
-            observer.observe(document.body, { attributes: true, childList: true, subtree: true });
-
-            // Also use ResizeObserver for more robust detection
-            const resizeObserver = new ResizeObserver(sendHeight);
-            resizeObserver.observe(document.body);
+            observer.observe(document.body, {
+                attributes: true,
+                childList: true,
+                subtree: true,
+            });
         </script>
     `;
 
@@ -89,11 +89,11 @@ export const componentToHtml = (components: BuilderComponent[]): string => {
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            line-height: 1.5;
-            padding: 1rem;
+            line-height: 1.6;
             background-color: transparent;
             color: hsl(var(--foreground));
-            margin: 0; /* Important to remove default body margin */
+            margin: 0;
+            padding: 0.1rem; /* Add tiny padding to help with height calculation */
         }
         p, div, table { margin: 1rem 0; }
     </style>

@@ -42,7 +42,7 @@ export default async function PropertyPage({ params }: { params: { id: string } 
             <span>{property.location}</span>
           </div>
 
-          <div className="prose prose-invert max-w-none bg-background p-4 rounded-lg">
+          <div className="bg-background rounded-lg">
             {/* The iframe will securely render the HTML from the page builder */}
             <DynamicIframe
               srcDoc={property.description}
