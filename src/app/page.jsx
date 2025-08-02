@@ -2,10 +2,9 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { PropertyList } from '@/components/property-list';
 import { getProperties, getPropertyTypes } from '@/lib/data';
-import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FilterSidebar } from '@/components/filter-sidebar';
 import { Card } from '@/components/ui/card';
@@ -77,9 +76,8 @@ function PageClient({ initialProperties, propertyTypes, searchParams }) {
                             </ToggleGroupItem>
                         </ToggleGroup>
                     </div>
-                    <Suspense fallback={<PropertyListSkeleton view={view} />}>
-                        <PropertyList initialProperties={initialProperties} searchParams={searchParams} view={view} />
-                    </Suspense>
+                    
+                    <PropertyList initialProperties={initialProperties} searchParams={searchParams} view={view} />
 
                     {initialProperties.length === 0 && (
                         <div className="text-center py-12 text-muted-foreground lg:col-span-4">
@@ -93,7 +91,6 @@ function PageClient({ initialProperties, propertyTypes, searchParams }) {
 }
 
 export default function PropertiesPageWrapper({ searchParams }) {
-    // This wrapper remains a client component to use Suspense correctly for the client components
     const [initialProperties, setInitialProperties] = useState([]);
     const [propertyTypes, setPropertyTypes] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -102,7 +99,7 @@ export default function PropertiesPageWrapper({ searchParams }) {
         async function loadData() {
             setLoading(true);
             const [props, types] = await Promise.all([
-                getProperties(searchParams),
+                getProperties({ ...searchParams, limit: 6 }), // Fetch initial page
                 getPropertyTypes()
             ]);
             setInitialProperties(props);
@@ -115,11 +112,18 @@ export default function PropertiesPageWrapper({ searchParams }) {
     if (loading) {
         return (
              <div className="container mx-auto px-4 py-8">
+                <div className="text-center mb-12">
+                    <Skeleton className="h-12 w-1/2 mx-auto mb-4" />
+                    <Skeleton className="h-6 w-1/3 mx-auto" />
+                </div>
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                     <aside className="lg:col-span-1">
-                        <Skeleton className="h-64 w-full" />
+                        <Skeleton className="h-96 w-full" />
                     </aside>
                     <main className="lg:col-span-3">
+                         <div className="flex justify-end mb-4">
+                            <Skeleton className="h-10 w-24" />
+                         </div>
                          <PropertyListSkeleton />
                     </main>
                 </div>
@@ -128,10 +132,12 @@ export default function PropertiesPageWrapper({ searchParams }) {
     }
 
     return (
-        <PageClient
-            initialProperties={initialProperties}
-            propertyTypes={propertyTypes}
-            searchParams={searchParams}
-        />
+        <Suspense fallback={<div>Loading...</div>}>
+            <PageClient
+                initialProperties={initialProperties}
+                propertyTypes={propertyTypes}
+                searchParams={searchParams}
+            />
+        </Suspense>
     );
 }

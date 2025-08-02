@@ -30,7 +30,7 @@ function processDocument(doc) {
 
 
 export async function getProperties(searchParams = {}) {
-  const { lat, lng, type, minPrice, maxPrice } = searchParams;
+  const { lat, lng, type, minPrice, maxPrice, limit, page = 1 } = searchParams;
   const collection = await getPropertiesCollection();
   
   let query = {};
@@ -59,15 +59,23 @@ export async function getProperties(searchParams = {}) {
   
   if (minPrice || maxPrice) {
       query.price = {};
-      if (minPrice) {
+      if (minPrice && parseFloat(minPrice) > 0) {
           query.price.$gte = parseFloat(minPrice);
       }
-      if (maxPrice) {
+      if (maxPrice && parseFloat(maxPrice) < 100000000) { // Check against max range
           query.price.$lte = parseFloat(maxPrice);
       }
   }
   
-  const properties = await collection.find(query).sort({ _id: -1 }).toArray();
+  let cursor = collection.find(query).sort({ _id: -1 });
+
+  if (limit) {
+      const parsedLimit = parseInt(limit, 10);
+      const parsedPage = parseInt(page, 10);
+      cursor = cursor.skip((parsedPage - 1) * parsedLimit).limit(parsedLimit);
+  }
+
+  const properties = await cursor.toArray();
   return properties.map(p => processDocument(p));
 }
 
