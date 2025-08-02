@@ -111,3 +111,7 @@ export default async function PropertyPage({ params }) {
                 </div>
             </div>
         </div>
+      </div>
+    </div>
+  );
+}

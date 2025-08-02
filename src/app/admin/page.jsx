@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -11,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from '@/hooks/use-toast';
 import { deleteProperty } from '@/lib/actions';
 import { formatCurrency } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 
 function DeleteConfirmation({ propertyId, onDeleted }) {
     const { toast } = useToast();
@@ -54,6 +56,34 @@ function DeleteConfirmation({ propertyId, onDeleted }) {
     );
 }
 
+function PropertiesSkeleton() {
+    return (
+        <Table>
+            <TableHeader>
+                <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {[...Array(5)].map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell><Skeleton className="h-4 w-[250px]" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-[200px]" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+                        <TableCell className="text-right space-x-2">
+                             <Skeleton className="h-8 w-[75px] inline-block" />
+                             <Skeleton className="h-8 w-[95px] inline-block" />
+                        </TableCell>
+                    </TableRow>
+                ))}
+            </TableBody>
+        </Table>
+    )
+}
+
 export default function AdminDashboard() {
     const [properties, setProperties] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -75,10 +105,6 @@ export default function AdminDashboard() {
         fetchProperties();
     }, []);
 
-    if (loading) {
-        return <div>Loading...</div>
-    }
-
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -91,34 +117,36 @@ export default function AdminDashboard() {
                 </Link>
             </CardHeader>
             <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Title</TableHead>
-                            <TableHead>Location</TableHead>
-                            <TableHead>Price</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {properties.map((property) => (
-                            <TableRow key={property.id}>
-                                <TableCell className="font-medium">{property.title}</TableCell>
-                                <TableCell>{property.location}</TableCell>
-                                <TableCell>{formatCurrency(property.price, 'INR')}</TableCell>
-                                <TableCell className="text-right space-x-2">
-                                    <Link href={`/admin/properties/${property.id}`}>
-                                        <Button variant="outline" size="sm">
-                                            <Edit className="mr-2 h-4 w-4" />
-                                            Edit
-                                        </Button>
-                                    </Link>
-                                    <DeleteConfirmation propertyId={property.id} onDeleted={fetchProperties} />
-                                </TableCell>
+                {loading ? <PropertiesSkeleton /> : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Title</TableHead>
+                                <TableHead>Location</TableHead>
+                                <TableHead>Price</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {properties.map((property) => (
+                                <TableRow key={property.id}>
+                                    <TableCell className="font-medium">{property.title}</TableCell>
+                                    <TableCell>{property.location}</TableCell>
+                                    <TableCell>{formatCurrency(property.price, 'INR')}</TableCell>
+                                    <TableCell className="text-right space-x-2">
+                                        <Link href={`/admin/properties/${property.id}`}>
+                                            <Button variant="outline" size="sm">
+                                                <Edit className="mr-2 h-4 w-4" />
+                                                Edit
+                                            </Button>
+                                        </Link>
+                                        <DeleteConfirmation propertyId={property.id} onDeleted={fetchProperties} />
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
             </CardContent>
         </Card>
     );
