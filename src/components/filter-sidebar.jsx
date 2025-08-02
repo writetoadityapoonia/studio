@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -11,8 +11,6 @@ import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 import { SlidersHorizontal } from 'lucide-react';
-import { useDebounce } from '@/hooks/use-debounce';
-import { Input } from './ui/input';
 
 const PRICE_RANGE = {
   min: 0,
@@ -36,8 +34,7 @@ export function FilterSidebar({ propertyTypes }) {
   const [hasMounted, setHasMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [filters, setFilters] = useState(() => getInitialFilters(searchParams));
-  const debouncedFilters = useDebounce(filters, 500);
-
+  
   useEffect(() => {
     setHasMounted(true);
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -46,42 +43,29 @@ export function FilterSidebar({ propertyTypes }) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Sync state with URL if it changes (e.g., browser back/forward)
   useEffect(() => {
-    // Sync state with URL if it changes (e.g., browser back/forward)
     setFilters(getInitialFilters(searchParams));
   }, [searchParams]);
 
-  useEffect(() => {
+  const applyFilters = () => {
     const params = new URLSearchParams(searchParams.toString());
     
-    // Avoid pushing router state if filters haven't changed
-    const currentType = params.get('type') || '';
-    const currentMinPrice = parseInt(params.get('minPrice') || PRICE_RANGE.min, 10);
-    const currentMaxPrice = parseInt(params.get('maxPrice') || PRICE_RANGE.max, 10);
-
-    if (
-        debouncedFilters.type === currentType &&
-        debouncedFilters.minPrice === currentMinPrice &&
-        debouncedFilters.maxPrice === currentMaxPrice
-    ) {
-        return;
-    }
-    
-    if (debouncedFilters.type) {
-        params.set('type', debouncedFilters.type);
+    if (filters.type) {
+        params.set('type', filters.type);
     } else {
         params.delete('type');
     }
     
     // Only set price if it's different from the default
-    if (debouncedFilters.minPrice > PRICE_RANGE.min) {
-        params.set('minPrice', debouncedFilters.minPrice.toString());
+    if (filters.minPrice > PRICE_RANGE.min) {
+        params.set('minPrice', filters.minPrice.toString());
     } else {
         params.delete('minPrice');
     }
 
-    if (debouncedFilters.maxPrice < PRICE_RANGE.max) {
-        params.set('maxPrice', debouncedFilters.maxPrice.toString());
+    if (filters.maxPrice < PRICE_RANGE.max) {
+        params.set('maxPrice', filters.maxPrice.toString());
     } else {
         params.delete('maxPrice');
     }
@@ -90,21 +74,12 @@ export function FilterSidebar({ propertyTypes }) {
     params.set('page', '1');
 
     router.push(`/?${params.toString()}`, { scroll: false });
-
-  }, [debouncedFilters, router, searchParams]);
+  };
 
 
   const handleTypeChange = (value) => {
     setFilters(prev => ({ ...prev, type: value === 'all' ? '' : value }));
   };
-
-  const handlePriceInputChange = (field, value) => {
-    const parsedValue = parseInt(value, 10);
-    if (!isNaN(parsedValue)) {
-      setFilters(prev => ({ ...prev, [field]: parsedValue }));
-    }
-  };
-
 
   const handlePriceChange = (value) => {
     setFilters(prev => ({ ...prev, minPrice: value[0], maxPrice: value[1] }));
@@ -145,32 +120,6 @@ export function FilterSidebar({ propertyTypes }) {
 
         <div className="space-y-4">
           <Label>Price Range</Label>
-          <div className="flex gap-2">
-             <div className="space-y-1">
-                <Label htmlFor="min-price" className="text-xs text-muted-foreground">Min Price</Label>
-                <Input
-                    id="min-price"
-                    type="number"
-                    value={filters.minPrice}
-                    onChange={(e) => handlePriceInputChange('minPrice', e.target.value)}
-                    step={PRICE_RANGE.step}
-                    min={PRICE_RANGE.min}
-                    max={PRICE_RANGE.max}
-                />
-             </div>
-             <div className="space-y-1">
-                <Label htmlFor="max-price" className="text-xs text-muted-foreground">Max Price</Label>
-                <Input
-                    id="max-price"
-                    type="number"
-                    value={filters.maxPrice}
-                    onChange={(e) => handlePriceInputChange('maxPrice', e.target.value)}
-                    step={PRICE_RANGE.step}
-                    min={PRICE_RANGE.min}
-                    max={PRICE_RANGE.max}
-                />
-             </div>
-          </div>
           <Slider
             value={[filters.minPrice, filters.maxPrice]}
             onValueChange={handlePriceChange}
@@ -185,6 +134,7 @@ export function FilterSidebar({ propertyTypes }) {
         </div>
 
         <div className="flex flex-col gap-2">
+            <Button onClick={applyFilters}>Apply Filters</Button>
             <Button onClick={resetFilters} variant="outline">Reset Filters</Button>
         </div>
       </CardContent>
