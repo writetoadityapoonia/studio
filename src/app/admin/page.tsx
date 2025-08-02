@@ -77,52 +77,50 @@ export default function AdminDashboard() {
     }, []);
 
     if (loading) {
-        return <div className="container mx-auto py-10">Loading...</div>
+        return <div>Loading...</div>
     }
 
     return (
-        <div className="container mx-auto py-10">
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Manage Properties</CardTitle>
-                    <Link href="/admin/properties/new">
-                        <Button>
-                            <PlusCircle className="mr-2" />
-                            Create New Property
-                        </Button>
-                    </Link>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Title</TableHead>
-                                <TableHead>Location</TableHead>
-                                <TableHead>Price</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Manage Properties</CardTitle>
+                <Link href="/admin/properties/new">
+                    <Button>
+                        <PlusCircle className="mr-2" />
+                        Create New Property
+                    </Button>
+                </Link>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Title</TableHead>
+                            <TableHead>Location</TableHead>
+                            <TableHead>Price</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {properties.map((property) => (
+                            <TableRow key={property.id}>
+                                <TableCell className="font-medium">{property.title}</TableCell>
+                                <TableCell>{property.location}</TableCell>
+                                <TableCell>{formatCurrency(property.price, 'INR')}</TableCell>
+                                <TableCell className="text-right space-x-2">
+                                    <Link href={`/admin/properties/${property.id}`}>
+                                        <Button variant="outline" size="sm">
+                                            <Edit className="mr-2 h-4 w-4" />
+                                            Edit
+                                        </Button>
+                                    </Link>
+                                    <DeleteConfirmation propertyId={property.id} onDeleted={fetchProperties} />
+                                </TableCell>
                             </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {properties.map((property) => (
-                                <TableRow key={property.id}>
-                                    <TableCell className="font-medium">{property.title}</TableCell>
-                                    <TableCell>{property.location}</TableCell>
-                                    <TableCell>{formatCurrency(property.price, 'INR')}</TableCell>
-                                    <TableCell className="text-right space-x-2">
-                                        <Link href={`/admin/properties/${property.id}`}>
-                                            <Button variant="outline" size="sm">
-                                                <Edit className="mr-2 h-4 w-4" />
-                                                Edit
-                                            </Button>
-                                        </Link>
-                                        <DeleteConfirmation propertyId={property.id} onDeleted={fetchProperties} />
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-        </div>
+                        ))}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
     );
 }

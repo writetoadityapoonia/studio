@@ -1,7 +1,7 @@
 'use server';
 
 import { connectToDatabase } from './mongodb';
-import type { Property, Enquiry } from './types';
+import type { Property, Enquiry, EnquiryWithPropertyInfo } from './types';
 import { ObjectId } from 'mongodb';
 
 async function getPropertiesCollection() {
@@ -43,4 +43,45 @@ export async function getEnquiriesForProperty(propertyId: string): Promise<Enqui
     const collection = await getEnquiriesCollection();
     const enquiries = await collection.find({ propertyId }).sort({ createdAt: -1 }).toArray();
     return enquiries.map(e => processDocument(e) as Enquiry);
+}
+
+export async function getAllEnquiriesWithPropertyInfo(): Promise<EnquiryWithPropertyInfo[]> {
+    const collection = await getEnquiriesCollection();
+    const enquiries = await collection.aggregate([
+        { $sort: { createdAt: -1 } },
+        {
+            $lookup: {
+                from: 'properties',
+                let: { propertyIdObj: { $toObjectId: '$propertyId' } },
+                pipeline: [
+                    { $match: { $expr: { $eq: ['$_id', '$$propertyIdObj'] } } }
+                ],
+                as: 'propertyInfo'
+            }
+        },
+        {
+            $unwind: {
+                path: '$propertyInfo',
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $addFields: {
+                'id': { $toString: '$_id' },
+                'property': {
+                    'id': { $toString: '$propertyInfo._id' },
+                    'title': '$propertyInfo.title'
+                }
+            }
+        },
+        {
+            $project: {
+                '_id': 0,
+                'propertyId': 0,
+                'propertyInfo': 0
+            }
+        }
+    ]).toArray();
+
+    return enquiries as EnquiryWithPropertyInfo[];
 }

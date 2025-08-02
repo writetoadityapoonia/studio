@@ -6,7 +6,7 @@ import { DndContext, DragEndEvent, DragOverlay, useDroppable, PointerSensor, use
 import { SortableContext, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { v4 as uuidv4 } from 'uuid';
-import { Plus, Trash2, Type, RectangleHorizontal, Save, GripVertical, TableIcon, Code, Blocks, Image as ImageIcon, Minus, Divide, Copy, Check, Mail, Phone, User } from 'lucide-react';
+import { Plus, Trash2, Type, RectangleHorizontal, Save, GripVertical, TableIcon, Code, Blocks, Image as ImageIcon, Minus, Divide, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,8 +15,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { createProperty, updateProperty } from '@/lib/actions';
-import { getPropertyById, getEnquiriesForProperty } from '@/lib/data';
-import type { Property, Enquiry } from '@/lib/types';
+import { getPropertyById } from '@/lib/data';
+import type { Property } from '@/lib/types';
 import { useRouter, useParams } from 'next/navigation';
 import { Toolbox, BuilderComponent, TextSize, TableComponent, parseDescription, TextColor, TextStyle, ButtonVariant, ButtonSize, SpacerSize } from '@/components/builder-elements';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -26,9 +26,6 @@ import Image from 'next/image';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { AlignLeft, AlignCenter, AlignRight, Bold, Italic } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format } from 'date-fns';
-
 
 const AI_PROMPT = `You are an expert real estate copywriter. Your task is to take raw, factual text about a property and transform it into a structured JSON array that can be used by a web application's description builder.
 
@@ -545,63 +542,6 @@ const PropertiesPanel = ({ selectedComponent, onUpdate }: { selectedComponent: B
   );
 };
 
-const EnquiriesList = ({ enquiries }: { enquiries: Enquiry[] }) => {
-    if (enquiries.length === 0) {
-        return (
-            <Card>
-                <CardHeader><CardTitle>Enquiries</CardTitle></CardHeader>
-                <CardContent>
-                    <p className="text-muted-foreground">No enquiries have been made for this property yet.</p>
-                </CardContent>
-            </Card>
-        )
-    }
-
-    return (
-        <Card>
-            <CardHeader><CardTitle>Enquiries</CardTitle></CardHeader>
-            <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Phone</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {enquiries.map(enquiry => (
-                            <TableRow key={enquiry.id}>
-                                <TableCell>{format(new Date(enquiry.createdAt), 'PP')}</TableCell>
-                                <TableCell>
-                                    <div className="flex items-center gap-2">
-                                        <User className="w-4 h-4 text-muted-foreground"/>
-                                        {enquiry.name}
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex items-center gap-2">
-                                        <Mail className="w-4 h-4 text-muted-foreground"/>
-                                        {enquiry.email}
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                     <div className="flex items-center gap-2">
-                                        <Phone className="w-4 h-4 text-muted-foreground"/>
-                                        {enquiry.phone}
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </CardContent>
-        </Card>
-    );
-};
-
-
 export default function PropertyEditPage() {
   const router = useRouter();
   const params = useParams();
@@ -626,7 +566,6 @@ export default function PropertyEditPage() {
   const [loading, setLoading] = useState(!isNew);
   const [descriptionMode, setDescriptionMode] = useState<'builder' | 'json'>('builder');
   const [showBedsBaths, setShowBedsBaths] = useState(false);
-  const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const sensors = useSensors(useSensor(PointerSensor));
 
   useEffect(() => {
@@ -651,7 +590,6 @@ export default function PropertyEditPage() {
         }
         setLoading(false);
       });
-      getEnquiriesForProperty(id).then(setEnquiries);
     } else {
         const initialComponents = parseDescription('');
         setComponents(initialComponents);
@@ -892,8 +830,6 @@ export default function PropertyEditPage() {
                      </CardContent>
                  </Card>
 
-                 {!isNew && <EnquiriesList enquiries={enquiries} />}
-
                    <div className="flex-grow flex flex-col">
                       <div className="flex justify-between items-center mb-4">
                          <div className="flex items-center gap-4">
@@ -954,5 +890,3 @@ export default function PropertyEditPage() {
     </ClientOnly>
   );
 }
-
-    

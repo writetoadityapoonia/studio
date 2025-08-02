@@ -19,3 +19,10 @@ export interface Enquiry {
   phone: string;
   createdAt: Date;
 }
+
+export interface EnquiryWithPropertyInfo extends Omit<Enquiry, 'propertyId'> {
+    property?: {
+        id: string;
+        title: string;
+    }
+}
