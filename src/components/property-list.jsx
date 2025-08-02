@@ -32,7 +32,7 @@ export function PropertyList({ initialProperties, searchParams = {} }) {
 
   return (
     <>
-      <div className="space-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
         {properties.map((property) => (
           <PropertyCard key={property.id} property={property} />
         ))}
@@ -49,3 +49,4 @@ export function PropertyList({ initialProperties, searchParams = {} }) {
 }
 
     
+

@@ -1,40 +1,45 @@
 
+
 import { PropertyList } from '@/components/property-list';
-import { getProperties } from '@/lib/data';
+import { getProperties, getPropertyTypes } from '@/lib/data';
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { FilterSidebar } from '@/components/filter-sidebar';
+import { Card } from '@/components/ui/card';
 
 function PropertyListSkeleton() {
   return (
-    <div className="space-y-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
       {[...Array(3)].map((_, i) => (
-        <div key={i} className="grid grid-cols-1 md:grid-cols-2 overflow-hidden rounded-lg border bg-card">
-           <Skeleton className="w-full h-64" />
-           <div className="p-6 flex flex-col justify-between">
-              <div>
-                <Skeleton className="h-8 w-3/4 mb-2" />
-                <Skeleton className="h-4 w-1/2 mb-4" />
-                <Skeleton className="h-10 w-1/3 mb-4" />
-                <div className="flex items-center gap-6">
-                  <Skeleton className="h-5 w-20" />
-                  <Skeleton className="h-5 w-20" />
-                </div>
+        <Card key={i} className="flex flex-col overflow-hidden">
+          <Skeleton className="w-full h-56" />
+          <div className="p-4 flex flex-col flex-grow">
+            <div className="flex-grow">
+              <Skeleton className="h-6 w-1/3 mb-2" />
+              <Skeleton className="h-7 w-3/4 mb-2" />
+              <Skeleton className="h-4 w-1/2 mb-4" />
+              <div className="grid grid-cols-2 gap-4">
+                <Skeleton className="h-5 w-20" />
+                <Skeleton className="h-5 w-20" />
+                <Skeleton className="h-5 w-20" />
+                <Skeleton className="h-5 w-20" />
               </div>
-              <div className="flex justify-end mt-4">
-                <Skeleton className="h-10 w-28" />
-              </div>
-           </div>
-        </div>
+            </div>
+            <div className="flex justify-end mt-4">
+              <Skeleton className="h-10 w-28" />
+            </div>
+          </div>
+        </Card>
       ))}
     </div>
   )
 }
 
 export default async function PropertiesPage({ searchParams }) {
-  const { lat, lng } = searchParams;
-  const initialProperties = await getProperties({ lat, lng });
+  const initialProperties = await getProperties(searchParams);
+  const propertyTypes = await getPropertyTypes();
   
-  const hasSearchResults = lat && lng;
+  const hasSearchResults = searchParams.lat && searchParams.lng;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -51,17 +56,26 @@ export default async function PropertiesPage({ searchParams }) {
         )}
       </section>
       
-      <Suspense fallback={<PropertyListSkeleton />}>
-        <PropertyList initialProperties={initialProperties} searchParams={searchParams} />
-      </Suspense>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <aside className="lg:col-span-1">
+          <FilterSidebar propertyTypes={propertyTypes} />
+        </aside>
+        <main className="lg:col-span-3">
+          <Suspense fallback={<PropertyListSkeleton />}>
+            <PropertyList initialProperties={initialProperties} searchParams={searchParams} />
+          </Suspense>
 
-       {initialProperties.length === 0 && hasSearchResults && (
-          <div className="text-center py-12 text-muted-foreground">
-              <p>No properties found within 15km of your search location.</p>
-          </div>
-      )}
+          {initialProperties.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground lg:col-span-4">
+                  <p>No properties found matching your criteria.</p>
+              </div>
+          )}
+        </main>
+      </div>
     </div>
   );
 }
 
     
+
+

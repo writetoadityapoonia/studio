@@ -30,27 +30,40 @@ function processDocument(doc) {
 
 
 export async function getProperties(searchParams = {}) {
-  const { lat, lng } = searchParams;
+  const { lat, lng, type, minPrice, maxPrice } = searchParams;
   const collection = await getPropertiesCollection();
   
   let query = {};
+
   if (lat && lng) {
       const latitude = parseFloat(lat);
       const longitude = parseFloat(lng);
       const radiusInMeters = 15 * 1000; // 15km
 
       if (!isNaN(latitude) && !isNaN(longitude)) {
-        query = {
-            locationPoint: {
-                $near: {
-                    $geometry: {
-                        type: "Point",
-                        coordinates: [longitude, latitude]
-                    },
-                    $maxDistance: radiusInMeters
-                }
+        query.locationPoint = {
+            $near: {
+                $geometry: {
+                    type: "Point",
+                    coordinates: [longitude, latitude]
+                },
+                $maxDistance: radiusInMeters
             }
         };
+      }
+  }
+
+  if (type) {
+      query.type = type;
+  }
+  
+  if (minPrice || maxPrice) {
+      query.price = {};
+      if (minPrice) {
+          query.price.$gte = parseFloat(minPrice);
+      }
+      if (maxPrice) {
+          query.price.$lte = parseFloat(maxPrice);
       }
   }
   
