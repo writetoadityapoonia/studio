@@ -593,6 +593,19 @@ export default function PropertyEditPage() {
     }
   }, [id, isNew, router, toast]);
 
+  useEffect(() => {
+    const savedMode = localStorage.getItem('property-editor-mode') as 'builder' | 'json' | null;
+    if (savedMode) {
+      setDescriptionMode(savedMode);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('property-editor-mode', descriptionMode);
+    }
+  }, [descriptionMode]);
+
   const selectedComponent = components.find(c => c.id === selectedComponentId) || null;
 
   const handleUpdateComponent = (id: string, newProps: Partial<BuilderComponent>) => {
@@ -854,3 +867,5 @@ export default function PropertyEditPage() {
     </ClientOnly>
   );
 }
+
+    
