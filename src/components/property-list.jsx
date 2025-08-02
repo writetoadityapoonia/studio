@@ -16,18 +16,22 @@ export function PropertyList({ initialProperties, searchParams = {}, view = 'gri
   const [hasMore, setHasMore] = useState(initialProperties.length >= PROPERTIES_PER_PAGE);
   const [isPending, startTransition] = useTransition();
 
+  // Effect to handle changes in searchParams from filters
   useEffect(() => {
-    // When searchParams change, it means filters have been applied.
-    // Reset the properties to the new initial set from the server.
+    // When searchParams change, filters have been applied.
+    // Reset the properties to the new initial set from the server props.
+    // In a real app, you might fetch page 1 here again based on new searchParams.
+    // For this setup, we rely on the parent component re-rendering with new initialProperties.
     setProperties(initialProperties);
-    setPage(1);
+    setPage(1); // Reset page number
     setHasMore(initialProperties.length >= PROPERTIES_PER_PAGE);
   }, [initialProperties]);
 
-  const loadMore = async () => {
+  const loadMore = () => {
     startTransition(async () => {
         const nextPage = page + 1;
         
+        // Pass current searchParams to getProperties when loading more
         const newProperties = await getProperties({
             ...searchParams,
             limit: PROPERTIES_PER_PAGE,
@@ -67,6 +71,7 @@ export function PropertyList({ initialProperties, searchParams = {}, view = 'gri
 }
 
     
+
 
 
 

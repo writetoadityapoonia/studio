@@ -91,57 +91,51 @@ function PageClient({ initialProperties, propertyTypes, searchParams }) {
 }
 
 export default function PropertiesPageWrapper({ searchParams }) {
-    const [properties, setProperties] = useState([]);
-    const [propertyTypes, setPropertyTypes] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    // This key will change whenever searchParams change, forcing a re-render of PageClient
-    const key = JSON.stringify(searchParams);
-
-    useEffect(() => {
-        async function loadData() {
-            setLoading(true);
-            const [props, types] = await Promise.all([
-                getProperties({ ...searchParams, limit: 6, page: 1 }),
-                getPropertyTypes()
-            ]);
-            setProperties(props);
-            setPropertyTypes(types);
-            setLoading(false);
-        }
-        loadData();
-    }, [searchParams]);
-
-    if (loading) {
-        return (
-             <div className="container mx-auto px-4 py-8">
-                <div className="text-center mb-12">
-                    <Skeleton className="h-12 w-1/2 mx-auto mb-4" />
-                    <Skeleton className="h-6 w-1/3 mx-auto" />
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                    <aside className="lg:col-span-1">
-                        <Skeleton className="h-96 w-full" />
-                    </aside>
-                    <main className="lg:col-span-3">
-                         <div className="flex justify-end mb-4">
-                            <Skeleton className="h-10 w-24" />
-                         </div>
-                         <PropertyListSkeleton />
-                    </main>
-                </div>
-            </div>
-        )
-    }
-
     return (
-        <Suspense fallback={<div>Loading...</div>}>
-            <PageClient
-                key={key} // Force re-mount on search param change
-                initialProperties={properties}
-                propertyTypes={propertyTypes}
-                searchParams={searchParams}
-            />
+        <Suspense fallback={<PropertiesPageSkeleton />}>
+            <PropertiesPage searchParams={searchParams} />
         </Suspense>
     );
+}
+
+async function PropertiesPage({ searchParams }) {
+    // Data is fetched in this async Server Component
+    const [initialProperties, propertyTypes] = await Promise.all([
+        getProperties({ ...searchParams, limit: 6, page: 1 }),
+        getPropertyTypes()
+    ]);
+
+    // The key forces the client component to re-mount when search params change
+    const key = JSON.stringify(searchParams);
+
+    return (
+        <PageClient
+            key={key}
+            initialProperties={initialProperties}
+            propertyTypes={propertyTypes}
+            searchParams={searchParams}
+        />
+    );
+}
+
+function PropertiesPageSkeleton() {
+    return (
+         <div className="container mx-auto px-4 py-8">
+            <div className="text-center mb-12">
+                <Skeleton className="h-12 w-1/2 mx-auto mb-4" />
+                <Skeleton className="h-6 w-1/3 mx-auto" />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <aside className="lg:col-span-1">
+                    <Skeleton className="h-96 w-full" />
+                </aside>
+                <main className="lg:col-span-3">
+                     <div className="flex justify-end mb-4">
+                        <Skeleton className="h-10 w-24" />
+                     </div>
+                     <PropertyListSkeleton />
+                </main>
+            </div>
+        </div>
+    )
 }
