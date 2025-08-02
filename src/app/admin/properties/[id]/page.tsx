@@ -36,22 +36,22 @@ const AI_PROMPT = `You are an expert real estate copywriter. Your task is to tak
 You must use the following component types and schemas:
 
 1.  **Text**: For headings and paragraphs.
-    *   `{ "id": "uuid", "type": "Text", "text": "...", "size": "sm|md|lg|xl", "align": "left|center|right", "color": "default|primary|muted", "style": ["bold", "italic"] }`
+    *   \`{ "id": "uuid", "type": "Text", "text": "...", "size": "sm|md|lg|xl", "align": "left|center|right", "color": "default|primary|muted", "style": ["bold", "italic"] }\`
 2.  **Table**: For structured data like highlights or unit configurations.
-    *   `{ "id": "uuid", "type": "Table", "headers": ["Header1", "Header2"], "rows": [["r1c1", "r1c2"], ["r2c1", "r2c2"]] }`
+    *   \`{ "id": "uuid", "type": "Table", "headers": ["Header1", "Header2"], "rows": [["r1c1", "r1c2"], ["r2c1", "r2c2"]] }\`
 3.  **Image**: For images.
-    *   `{ "id": "uuid", "type": "Image", "src": "url", "alt": "description" }`
+    *   \`{ "id": "uuid", "type": "Image", "src": "url", "alt": "description" }\`
 4.  **Spacer**: For adding vertical space.
-    *   `{ "id": "uuid", "type": "Spacer", "size": "sm|md|lg" }`
+    *   \`{ "id": "uuid", "type": "Spacer", "size": "sm|md|lg" }\`
 5.  **Divider**: For a horizontal rule.
-    *   `{ "id": "uuid", "type": "Divider" }`
+    *   \`{ "id": "uuid", "type": "Divider" }\`
 
 **Instructions:**
 
 1.  **Analyze the Input**: Read the provided text and identify the different sections (e.g., introduction, highlights, amenities).
 2.  **Generate IDs**: For each component object, generate a unique UUID for the "id" field.
 3.  **Map to Components**:
-    *   Use "Text" components for titles, paragraphs, and lists. Use different sizes for headings (`xl`, `lg`) and body text (`md`).
+    *   Use "Text" components for titles, paragraphs, and lists. Use different sizes for headings (\`xl\`, \`lg\`) and body text (\`md\`).
     *   Use "Table" components for tabular data.
     *   Use "Divider" components to separate major sections.
     *   Use "Spacer" components to add breathing room where appropriate.
@@ -70,7 +70,7 @@ Features:
   {"id": "d8b9e2f3-c4d5-d6e7-g8b9-c0d1e2f3a4b5", "type": "Text", "text": "This sunny loft has 2 beds, 2 baths, and is 1200 sqft.", "size": "md", "align": "left", "color": "default", "style": []},
   {"id": "e9c0f3a4-d5e6-e7f8-h9c0-d1e2f3a4b5c6", "type": "Table", "headers": ["Feature", "Details"], "rows": [["Beds", "2"], ["Baths", "2"], ["Area", "1200 sqft"]]},
   {"id": "f0d1a4b5-e6f7-f8g9-i0d1-e2f3a4b5c6d7", "type": "Text", "text": "Features:", "size": "lg", "align": "left", "color": "default", "style": []},
-  {"id": "01e2b5c6-f7g8-g9h0-j1e2-f3a4b5c6d7e8", "type": "Text", "text": "- Rooftop Deck\n- Gym", "size": "md", "align": "left", "color": "default", "style": []}
+  {"id": "01e2b5c6-f7g8-g9h0-j1e2-f3a4b5c6d7e8", "type": "Text", "text": "- Rooftop Deck\\n- Gym", "size": "md", "align": "left", "color": "default", "style": []}
 ]
 `;
 
