@@ -1,5 +1,5 @@
 /**
- * @fileoverview This file initializes and configures the Genkit AI instance.
+ * @fileoverview This file initializes and a new Firebase Project or retrieves the current project and provides a Firebase app
  * It is the central point for setting up plugins and other Genkit-related
  * configurations for the entire application.
  */
