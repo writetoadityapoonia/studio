@@ -120,10 +120,7 @@ function SortableItem({ id, children }) {
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} className="relative group">
-       <div {...listeners} className="absolute -left-8 top-1/2 -translate-y-1/2 p-2 cursor-grab opacity-30 hover:opacity-100">
-           <GripVertical className="w-5 h-5" />
-       </div>
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="relative group cursor-grab">
       {children}
     </div>
   );
@@ -598,7 +595,7 @@ const ImageSortableItemWrapper = ({ id, onRemove, children }) => {
     };
 
     return (
-        <div ref={setNodeRef} style={style} className="relative aspect-square w-full group">
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="relative aspect-square w-full group cursor-grab">
              {children}
             <button
                 onClick={(e) => {
@@ -609,10 +606,6 @@ const ImageSortableItemWrapper = ({ id, onRemove, children }) => {
             >
                 <Trash2 className="w-3 h-3" />
             </button>
-            <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
-            <div {...attributes} {...listeners} className="absolute bottom-1 right-1 text-white w-4 h-4 cursor-grab z-10">
-                <GripVertical />
-            </div>
         </div>
     );
 };
@@ -1093,3 +1086,4 @@ export default function PropertyEditPage() {
 }
 
     
+
