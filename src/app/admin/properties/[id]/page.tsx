@@ -824,7 +824,7 @@ export default function PropertyEditPage() {
                                 </>
                               )}
 
-                              <div className={cn("space-y-2", showBedsBaths ? "md:col-span-2" : "")}>
+                              <div className={cn("space-y-2", !showBedsBaths ? "md:col-span-2" : "")}>
                                   <Label htmlFor="area">Area (sqft)</Label>
                                   <Input id="area" name="area" type="number" value={property.area || 0} onChange={handleInputChange} />
                               </div>
@@ -892,3 +892,5 @@ export default function PropertyEditPage() {
     </ClientOnly>
   );
 }
+
+    
