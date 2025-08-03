@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -219,7 +218,7 @@ const Canvas = ({ components, selectedComponentId, onSelect, onDelete, onSort })
 
   function handleDragEnd(event) {
       const { active, over } = event;
-      if (over && active.id !== over.id) {
+      if (over && active.id !== over.id && !active.id.toString().startsWith('toolbox-')) {
           const oldIndex = components.findIndex((c) => c.id === active.id);
           const newIndex = components.findIndex((c) => c.id === over.id);
           if (oldIndex !== -1 && newIndex !== -1) {
@@ -750,6 +749,15 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
         handleAddComponent(active.data.current?.type, over.id);
         return;
     }
+
+    if (active.id !== over.id) {
+      const oldIndex = components.findIndex((c) => c.id === active.id);
+      const newIndex = components.findIndex((c) => c.id === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+          handleSortComponents(oldIndex, newIndex);
+      }
+    }
   };
   
   const handleSave = async () => {
@@ -873,7 +881,7 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
   const activeComponentType = activeId && activeId.toString().startsWith('toolbox-') ? activeId.toString().split('-')[1] : null;
 
   return (
-      <DndContext onDragEnd={handleDragEnd} onDragStart={e => setActiveId(e.active.id.toString())} sensors={sensors}>
+      <DndContext onDragEnd={handleDragEnd} onDragStart={e => setActiveId(e.active.id.toString())} sensors={sensors} collisionDetection={closestCenter}>
         <div className="flex flex-col h-screen bg-background text-foreground">
           <header className="flex items-center justify-between p-4 border-b">
               <h1 className="text-2xl font-bold font-headline">{isNew ? 'Create New Property' : `Editing: ${property.title}`}</h1>
@@ -1118,6 +1126,8 @@ export default function PropertyEditPage() {
     </ClientOnly>
   );
 }
+
+    
 
     
 
