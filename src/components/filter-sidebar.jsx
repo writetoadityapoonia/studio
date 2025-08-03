@@ -112,7 +112,10 @@ export function FilterSidebar({ propertyTypes }) {
 
   const FilterContent = () => (
     <Card className="sticky top-24 border-0 lg:border shadow-none lg:shadow-sm">
-      <CardHeader>
+      <CardHeader className="lg:hidden">
+        <CardTitle>Filters</CardTitle>
+      </CardHeader>
+       <CardHeader className="hidden lg:block">
         <CardTitle>Filters</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -186,7 +189,12 @@ export function FilterSidebar({ propertyTypes }) {
                 </Button>
             </SheetTrigger>
             <SheetContent side="left" className="p-0">
-                <FilterContent />
+                 <SheetHeader className="p-4 border-b">
+                    <SheetTitle>Filters</SheetTitle>
+                </SheetHeader>
+                <div className="p-4">
+                    <FilterContent />
+                </div>
             </SheetContent>
         </Sheet>
     );
