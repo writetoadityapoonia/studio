@@ -34,8 +34,8 @@ export const parseDescription = (description) => {
             }).filter(c => c.id && c.type);
         }
     } catch (e) {
-         console.error("Failed to parse description JSON:", e);
-         return [];
+         // If parsing fails, it's likely old plain text. Wrap it in a default Text component.
+         return generateInitialComponentsFromHtml(description);
     }
     return [];
 };
