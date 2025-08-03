@@ -69,14 +69,22 @@ export async function deleteProperty(id) {
 
 export async function createEnquiry(enquiryData) {
     const collection = await getEnquiriesCollection();
-    const result = await collection.insertOne({ ...enquiryData, createdAt: new Date() });
+    
+    // Convert propertyId string to ObjectId for better query performance
+    const enquiryToInsert = {
+        ...enquiryData,
+        propertyId: new ObjectId(enquiryData.propertyId),
+        createdAt: new Date()
+    };
+
+    const result = await collection.insertOne(enquiryToInsert);
     
     if (!result.insertedId) {
         throw new Error('Failed to create enquiry');
     }
 
     // Revalidate the admin page for the property to show the new enquiry
-    revalidatePath(`/admin/properties/${enquiryData.propertyId}`);
+    revalidatePath(`/admin/enquiries`);
 }
 
 

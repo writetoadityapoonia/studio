@@ -7,14 +7,21 @@ import { ObjectId } from 'mongodb';
 
 async function getPropertiesCollection() {
     const db = await connectToDatabase();
-    // Ensure 2dsphere index exists on locationPoint for geo-queries
-    await db.collection('properties').createIndex({ locationPoint: '2dsphere' });
-    return db.collection('properties');
+    const collection = db.collection('properties');
+    // Ensure indexes exist for faster queries
+    await Promise.all([
+        collection.createIndex({ locationPoint: '2dsphere' }),
+        collection.createIndex({ type: 1, price: 1, _id: -1 }),
+        collection.createIndex({ price: 1, _id: -1 })
+    ]);
+    return collection;
 }
 
 async function getEnquiriesCollection() {
     const db = await connectToDatabase();
-    return db.collection('enquiries');
+    const collection = db.collection('enquiries');
+    await collection.createIndex({ propertyId: 1, createdAt: -1 });
+    return collection;
 }
 
 async function getPropertyTypesCollection() {
@@ -93,7 +100,7 @@ export async function getEnquiriesForProperty(propertyId) {
         return [];
     }
     const collection = await getEnquiriesCollection();
-    const enquiries = await collection.find({ propertyId }).sort({ createdAt: -1 }).toArray();
+    const enquiries = await collection.find({ propertyId: new ObjectId(propertyId) }).sort({ createdAt: -1 }).toArray();
     return enquiries.map(e => processDocument(e));
 }
 
@@ -104,10 +111,8 @@ export async function getAllEnquiriesWithPropertyInfo() {
         {
             $lookup: {
                 from: 'properties',
-                let: { propertyIdObj: { $toObjectId: '$propertyId' } },
-                pipeline: [
-                    { $match: { $expr: { $eq: ['$_id', '$$propertyIdObj'] } } }
-                ],
+                localField: 'propertyId',
+                foreignField: '_id',
                 as: 'propertyInfo'
             }
         },
@@ -143,5 +148,3 @@ export async function getPropertyTypes() {
   const types = await collection.find({}).sort({ name: 1 }).toArray();
   return types.map(t => processDocument(t));
 }
-
-    
