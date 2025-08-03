@@ -201,7 +201,7 @@ const CanvasComponent = ({ component, selected, onSelect, onDelete }) => {
       )}
     >
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+            <Button variant="ghost" size="icon" onClick={() => onDelete(component.id)}>
                 <Trash2 className="w-4 h-4 text-destructive" />
             </Button>
         </div>
@@ -210,40 +210,47 @@ const CanvasComponent = ({ component, selected, onSelect, onDelete }) => {
   );
 };
 
-const Canvas = ({ components, setComponents, selectedComponentId, setSelectedComponentId }) => {
+const Canvas = ({ components, selectedComponentId, onSelect, onDelete, onSort }) => {
   const { setNodeRef, isOver } = useDroppable({ id: 'canvas' });
 
-  const handleDelete = (componentId) => {
-    setComponents(prev => prev.filter(c => c.id !== componentId));
-    if (selectedComponentId === componentId) {
-        setSelectedComponentId(null);
-    }
-  };
+  function handleDragEnd(event) {
+      const { active, over } = event;
+      if (over && active.id !== over.id) {
+          const oldIndex = components.findIndex((c) => c.id === active.id);
+          const newIndex = components.findIndex((c) => c.id === over.id);
+          if (oldIndex !== -1 && newIndex !== -1) {
+            onSort(oldIndex, newIndex);
+          }
+      }
+  }
 
   return (
-    <SortableContext items={components.map(c => c.id)} strategy={rectSortingStrategy}>
-      <div ref={setNodeRef} id="canvas" className={cn("w-full h-full bg-muted/30 rounded-lg p-8 space-y-2 overflow-y-auto", {"bg-primary/10": isOver})}>
-        {components.length > 0 ? (
-          components.map(component => (
-            <SortableItem key={component.id} id={component.id}>
-              <CanvasComponent
-                component={component}
-                selected={selectedComponentId === component.id}
-                onSelect={() => setSelectedComponentId(component.id)}
-                onDelete={() => handleDelete(component.id)}
-              />
-            </SortableItem>
-          ))
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-            <Plus className="w-12 h-12 mb-4" />
-            <p>Drag elements from the toolbox here.</p>
-          </div>
-        )}
-      </div>
-    </SortableContext>
+    <DndContext onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
+      <SortableContext items={components.map(c => c.id)} strategy={rectSortingStrategy}>
+        <div ref={setNodeRef} id="canvas" className={cn("w-full h-full bg-muted/30 rounded-lg p-8 space-y-2 overflow-y-auto", {"bg-primary/10": isOver})}>
+          {components.length > 0 ? (
+            components.map(component => (
+              <SortableItem key={component.id} id={component.id}>
+                <CanvasComponent
+                  component={component}
+                  selected={selectedComponentId === component.id}
+                  onSelect={() => onSelect(component.id)}
+                  onDelete={onDelete}
+                />
+              </SortableItem>
+            ))
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+              <Plus className="w-12 h-12 mb-4" />
+              <p>Drag elements from the toolbox here.</p>
+            </div>
+          )}
+        </div>
+      </SortableContext>
+    </DndContext>
   );
 };
+
 
 const PropertiesPanel = ({ selectedComponent, onUpdate }) => {
   const [tableJsonMode, setTableJsonMode] = useState(false);
@@ -651,48 +658,46 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
   };
 
   useEffect(() => {
-    if (initialProperty) {
+      const initialComponents = parseDescription(initialProperty.description || '');
+      setComponents(initialComponents);
+
       if (initialProperty.bedrooms > 0 || initialProperty.bathrooms > 0) {
         setShowBedsBaths(true);
       }
-      const initialComponents = parseDescription(initialProperty.description || '');
-      setComponents(initialComponents);
-    } else {
-        const initialComponents = parseDescription('');
-        setComponents(initialComponents);
-        setProperty(p => ({...p, description: JSON.stringify(initialComponents)}));
-    }
-
-    const savedMode = localStorage.getItem('property-editor-mode');
-    if (savedMode) {
-      setDescriptionMode(savedMode);
-    }
+      const savedMode = localStorage.getItem('property-editor-mode');
+      if (savedMode) {
+        setDescriptionMode(savedMode);
+      }
   }, [initialProperty]);
 
   useEffect(() => {
     localStorage.setItem('property-editor-mode', descriptionMode);
   }, [descriptionMode]);
+  
+  useEffect(() => {
+    // Sync components state to the main property description state
+    setProperty(p => ({...p, description: JSON.stringify(components)}));
+  }, [components]);
 
   const selectedComponent = components.find(c => c.id === selectedComponentId) || null;
 
   const handleUpdateComponent = (id, newProps) => {
-    setComponents(prev => {
-        const newComponents = prev.map(c => c.id === id ? { ...c, ...newProps } : c);
-        setProperty(p => ({...p, description: JSON.stringify(newComponents)}));
-        return newComponents;
-    });
+    setComponents(prev => prev.map(c => c.id === id ? { ...c, ...newProps } : c));
   };
   
-  const handleDragEnd = (event) => {
-    const { active, over } = event;
-    setActiveId(null);
+  const handleDeleteComponent = (componentId) => {
+    setComponents(prev => prev.filter(c => c.id !== componentId));
+    if (selectedComponentId === componentId) {
+        setSelectedComponentId(null);
+    }
+  };
 
-    if (!over) return;
-    
-    if (active.id.toString().startsWith('toolbox-')) {
-        const type = active.data.current?.type;
+  const handleSortComponents = (oldIndex, newIndex) => {
+    setComponents(prev => arrayMove(prev, oldIndex, newIndex));
+  };
+
+  const handleAddComponent = (type, overId) => {
         let newComponent;
-
         switch (type) {
             case 'Text':
                 newComponent = { id: uuidv4(), type: 'Text', text: 'New Text Block', size: 'md', align: 'left', color: 'default', style: [] };
@@ -712,32 +717,38 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
             case 'Divider':
                 newComponent = { id: uuidv4(), type: 'Divider' };
                 break;
-            default:
-                return;
+            default: return;
         }
         
-        const overIndex = over.id === 'canvas' ? components.length : components.findIndex(c => c.id === over.id);
-        const newItems = [...components];
-        if (overIndex !== -1) {
-             newItems.splice(overIndex, 0, newComponent);
-        } else {
-             newItems.push(newComponent);
-        }
-        setComponents(newItems);
-        setProperty(p => ({...p, description: JSON.stringify(newItems)}));
+        setComponents(prev => {
+            const overIndex = overId === 'canvas' ? prev.length : prev.findIndex(c => c.id === overId);
+            const newItems = [...prev];
+            if (overIndex !== -1) {
+                 newItems.splice(overIndex, 0, newComponent);
+            } else {
+                 newItems.push(newComponent);
+            }
+            return newItems;
+        });
         setSelectedComponentId(newComponent.id);
+  }
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (!over) return;
+    
+    if (active.id.toString().startsWith('toolbox-')) {
+        handleAddComponent(active.data.current?.type, over.id);
         return;
     }
     
     if (active.id !== over.id) {
-        setComponents(items => {
-            const oldIndex = items.findIndex(item => item.id === active.id);
-            const newIndex = items.findIndex(item => item.id === over.id);
-            if (oldIndex === -1 || newIndex === -1) return items;
-            const newItems = arrayMove(items, oldIndex, newIndex);
-            setProperty(p => ({...p, description: JSON.stringify(newItems)}));
-            return newItems;
-        });
+        const oldIndex = components.findIndex(item => item.id === active.id);
+        const newIndex = components.findIndex(item => item.id === over.id);
+        if (oldIndex === -1 || newIndex === -1) return;
+        handleSortComponents(oldIndex, newIndex);
     }
   };
   
@@ -748,7 +759,6 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
         descriptionToSave = JSON.stringify(components);
     } else if (descriptionMode === 'json') {
         try {
-            // Validate JSON before saving
             JSON.parse(property.description || '[]');
             descriptionToSave = property.description;
         } catch(e) {
@@ -814,7 +824,6 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
         setComponents(parsedComponents);
     } catch(e) {
         // Don't toast here, it would be annoying on every keystroke
-        // Maybe show a small validation error icon/message
     }
   }
 
@@ -1014,7 +1023,13 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
                       {descriptionMode === 'builder' ? (
                         <div className="grid grid-cols-[250px_1fr] flex-grow gap-6 h-full min-h-[500px]">
                             <Toolbox />
-                            <Canvas components={components} setComponents={setComponents} selectedComponentId={selectedComponentId} setSelectedComponentId={setSelectedComponentId} />
+                             <Canvas 
+                                components={components}
+                                selectedComponentId={selectedComponentId}
+                                onSelect={setSelectedComponentId}
+                                onDelete={handleDeleteComponent}
+                                onSort={handleSortComponents}
+                            />
                         </div>
                       ) : (
                         <Textarea 
@@ -1103,3 +1118,5 @@ export default function PropertyEditPage() {
     </ClientOnly>
   );
 }
+
+    
