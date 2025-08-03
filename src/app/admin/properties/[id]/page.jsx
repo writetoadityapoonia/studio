@@ -111,11 +111,12 @@ function PromptCard() {
 }
 
 function SortableItem({ id, children }) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    opacity: isDragging ? 0.5 : 1,
   };
 
   return (
@@ -214,43 +215,29 @@ const CanvasComponent = ({ component, selected, onSelect, onDelete }) => {
 
 const Canvas = ({ components, selectedComponentId, onSelect, onDelete, onSort }) => {
   const { setNodeRef, isOver } = useDroppable({ id: 'canvas' });
-  const sensors = useSensors(useSensor(PointerSensor));
-
-  function handleDragEnd(event) {
-      const { active, over } = event;
-      if (over && active.id !== over.id && !active.id.toString().startsWith('toolbox-')) {
-          const oldIndex = components.findIndex((c) => c.id === active.id);
-          const newIndex = components.findIndex((c) => c.id === over.id);
-          if (oldIndex !== -1 && newIndex !== -1) {
-            onSort(oldIndex, newIndex);
-          }
-      }
-  }
 
   return (
-    <DndContext onDragEnd={handleDragEnd} collisionDetection={closestCenter} sensors={sensors}>
+    <div ref={setNodeRef} id="canvas" className={cn("w-full h-full bg-muted/30 rounded-lg p-8 space-y-2 overflow-y-auto", {"bg-primary/10": isOver})}>
       <SortableContext items={components.map(c => c.id)} strategy={rectSortingStrategy}>
-        <div ref={setNodeRef} id="canvas" className={cn("w-full h-full bg-muted/30 rounded-lg p-8 space-y-2 overflow-y-auto", {"bg-primary/10": isOver})}>
-          {components.length > 0 ? (
-            components.map(component => (
-              <SortableItem key={component.id} id={component.id}>
-                <CanvasComponent
-                  component={component}
-                  selected={selectedComponentId === component.id}
-                  onSelect={() => onSelect(component.id)}
-                  onDelete={onDelete}
-                />
-              </SortableItem>
-            ))
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-              <Plus className="w-12 h-12 mb-4" />
-              <p>Drag elements from the toolbox here.</p>
-            </div>
-          )}
-        </div>
+        {components.length > 0 ? (
+          components.map(component => (
+            <SortableItem key={component.id} id={component.id}>
+              <CanvasComponent
+                component={component}
+                selected={selectedComponentId === component.id}
+                onSelect={() => onSelect(component.id)}
+                onDelete={onDelete}
+              />
+            </SortableItem>
+          ))
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+            <Plus className="w-12 h-12 mb-4" />
+            <p>Drag elements from the toolbox here.</p>
+          </div>
+        )}
       </SortableContext>
-    </DndContext>
+    </div>
   );
 };
 
@@ -681,7 +668,6 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
   }, [descriptionMode]);
   
   useEffect(() => {
-    // Sync components state to the main property description state
     setProperty(p => ({...p, description: JSON.stringify(components)}));
   }, [components]);
 
@@ -691,9 +677,9 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
     setComponents(prev => prev.map(c => c.id === id ? { ...c, ...newProps } : c));
   };
   
-  const handleDeleteComponent = (componentId) => {
-    setComponents(prev => prev.filter(c => c.id !== componentId));
-    if (selectedComponentId === componentId) {
+  const handleDeleteComponent = (id) => {
+    setComponents(prev => prev.filter(c => c.id !== id));
+    if (selectedComponentId === id) {
         setSelectedComponentId(null);
     }
   };
@@ -703,41 +689,43 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
   };
 
   const handleAddComponent = (type, overId) => {
-        let newComponent;
-        switch (type) {
-            case 'Text':
-                newComponent = { id: uuidv4(), type: 'Text', text: 'New Text Block', size: 'md', align: 'left', color: 'default', style: [] };
-                break;
-            case 'Button':
-                newComponent = { id: uuidv4(), type: 'Button', text: 'Click Me', href: '', variant: 'default', size: 'default' };
-                break;
-            case 'Table':
-                newComponent = { id: uuidv4(), type: 'Table', headers: ['Feature', 'Value'], rows: [['Bedrooms', '3'], ['Bathrooms', '2']] };
-                break;
-            case 'Image':
-                newComponent = { id: uuidv4(), type: 'Image', src: 'https://placehold.co/600x400.png', alt: 'Placeholder image' };
-                break;
-            case 'Spacer':
-                newComponent = { id: uuidv4(), type: 'Spacer', size: 'md' };
-                break;
-            case 'Divider':
-                newComponent = { id: uuidv4(), type: 'Divider' };
-                break;
-            default: return;
+    let newComponent;
+    const id = uuidv4();
+    switch (type) {
+        case 'Text':
+            newComponent = { id, type: 'Text', text: 'New Text Block', size: 'md', align: 'left', color: 'default', style: [] };
+            break;
+        case 'Button':
+            newComponent = { id, type: 'Button', text: 'Click Me', href: '', variant: 'default', size: 'default' };
+            break;
+        case 'Table':
+            newComponent = { id, type: 'Table', headers: ['Feature', 'Value'], rows: [['Bedrooms', '3'], ['Bathrooms', '2']] };
+            break;
+        case 'Image':
+            newComponent = { id, type: 'Image', src: 'https://placehold.co/600x400.png', alt: 'Placeholder image' };
+            break;
+        case 'Spacer':
+            newComponent = { id, type: 'Spacer', size: 'md' };
+            break;
+        case 'Divider':
+            newComponent = { id, type: 'Divider' };
+            break;
+        default: return;
+    }
+    
+    setComponents(prev => {
+        const overIndex = overId === 'canvas' ? prev.length : prev.findIndex(c => c.id === overId);
+        if (overIndex !== -1) {
+            return [...prev.slice(0, overIndex + 1), newComponent, ...prev.slice(overIndex + 1)];
         }
-        
-        setComponents(prev => {
-            const overIndex = overId === 'canvas' ? prev.length : prev.findIndex(c => c.id === overId);
-            const newItems = [...prev];
-            if (overIndex !== -1) {
-                 newItems.splice(overIndex + 1, 0, newComponent);
-            } else {
-                 newItems.push(newComponent);
-            }
-            return newItems;
-        });
-        setSelectedComponentId(newComponent.id);
+        return [...prev, newComponent];
+    });
+    setSelectedComponentId(id);
   }
+
+  const handleDragStart = (event) => {
+    setActiveId(event.active.id);
+  };
 
   const handleDragEnd = (event) => {
     const { active, over } = event;
@@ -745,11 +733,14 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
 
     if (!over) return;
     
-    if (active.id.toString().startsWith('toolbox-')) {
-        handleAddComponent(active.data.current?.type, over.id);
+    // Handle adding new component from toolbox
+    if (active.id.toString().startsWith('toolbox-') && over.id) {
+        const type = active.data.current?.type;
+        handleAddComponent(type, over.id === 'canvas' ? 'canvas' : over.id);
         return;
     }
 
+    // Handle sorting existing components
     if (active.id !== over.id) {
       const oldIndex = components.findIndex((c) => c.id === active.id);
       const newIndex = components.findIndex((c) => c.id === over.id);
@@ -828,8 +819,7 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
     const newDescription = e.target.value;
     setProperty(prev => ({...prev, description: newDescription}));
     try {
-        const parsedComponents = parseDescription(newDescription);
-        setComponents(parsedComponents);
+        parseDescription(newDescription);
     } catch(e) {
         // Don't toast here, it would be annoying on every keystroke
     }
@@ -881,7 +871,7 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
   const activeComponentType = activeId && activeId.toString().startsWith('toolbox-') ? activeId.toString().split('-')[1] : null;
 
   return (
-      <DndContext onDragEnd={handleDragEnd} onDragStart={e => setActiveId(e.active.id.toString())} sensors={sensors} collisionDetection={closestCenter}>
+      <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd} sensors={sensors} collisionDetection={closestCenter}>
         <div className="flex flex-col h-screen bg-background text-foreground">
           <header className="flex items-center justify-between p-4 border-b">
               <h1 className="text-2xl font-bold font-headline">{isNew ? 'Create New Property' : `Editing: ${property.title}`}</h1>
@@ -1062,7 +1052,7 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
         </div>
 
         <DragOverlay>
-          {activeComponentType ? (
+          {activeId && activeComponentType ? (
             <div className="flex items-center gap-4 p-2 bg-primary text-primary-foreground rounded-lg border cursor-grabbing shadow-lg">
                {activeComponentType === 'Text' && <Type className="w-6 h-6" />}
                {activeComponentType === 'Button' && <RectangleHorizontal className="w-6 h-6" />}
@@ -1072,6 +1062,11 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
                {activeComponentType === 'Divider' && <Divide className="w-6 h-6" />}
                <span className="font-medium">{activeComponentType}</span>
              </div>
+          ) : activeId ? (
+              components.find(c => c.id === activeId) &&
+              <div className="p-4 bg-background rounded-lg shadow-lg cursor-grabbing">
+                <CanvasComponent component={components.find(c => c.id === activeId)} selected={false} onSelect={() => {}} onDelete={() => {}} />
+              </div>
           ) : null}
         </DragOverlay>
       </DndContext>
@@ -1126,8 +1121,6 @@ export default function PropertyEditPage() {
     </ClientOnly>
   );
 }
-
-    
 
     
 
