@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -609,6 +610,26 @@ const ImageSortableItemWrapper = ({ id, onRemove, children }) => {
     );
 };
 
+function DeleteDropzone({ visible }) {
+    const { setNodeRef, isOver } = useDroppable({
+        id: 'delete-dropzone',
+    });
+
+    if (!visible) return null;
+
+    return (
+        <div
+            ref={setNodeRef}
+            className={cn(
+                'fixed bottom-6 right-1/2 translate-x-1/2 z-50 flex h-24 w-48 flex-col items-center justify-center rounded-lg border-2 border-dashed border-destructive bg-destructive/10 text-destructive transition-all',
+                { 'scale-110 bg-destructive/20': isOver }
+            )}
+        >
+            <Trash2 className="h-8 w-8" />
+            <p className="mt-2 text-sm font-medium">Drop here to delete</p>
+        </div>
+    );
+}
 
 function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
   const router = useRouter();
@@ -732,6 +753,11 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
     setActiveId(null);
 
     if (!over) return;
+    
+    if (over.id === 'delete-dropzone' && !active.id.toString().startsWith('toolbox-')) {
+        handleDeleteComponent(active.id);
+        return;
+    }
     
     // Handle adding new component from toolbox
     if (active.id.toString().startsWith('toolbox-') && over.id) {
@@ -869,6 +895,7 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
   };
 
   const activeComponentType = activeId && activeId.toString().startsWith('toolbox-') ? activeId.toString().split('-')[1] : null;
+  const isDraggingCanvasItem = activeId && !activeId.toString().startsWith('toolbox-');
 
   return (
       <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd} sensors={sensors} collisionDetection={closestCenter}>
@@ -1050,6 +1077,8 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
               </div>
           </div>
         </div>
+        
+        <DeleteDropzone visible={isDraggingCanvasItem} />
 
         <DragOverlay>
           {activeId && activeComponentType ? (
