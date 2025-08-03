@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -27,6 +27,83 @@ function getInitialFilters(searchParams) {
         search: searchParams.get('search') || '',
     };
 }
+
+const FilterContent = memo(function FilterContent({
+    filters,
+    propertyTypes,
+    onFilterChange,
+    onApply,
+    onReset,
+}) {
+    const handleTypeChange = (value) => {
+        onFilterChange({ ...filters, type: value === 'all' ? '' : value });
+    };
+    
+    const handlePriceChange = (value) => {
+        onFilterChange({ ...filters, minPrice: value[0], maxPrice: value[1] });
+    };
+
+    const handleSearchChange = (event) => {
+        onFilterChange({ ...filters, search: event.target.value });
+    };
+
+    return (
+        <Card className="sticky top-24 border-0 lg:border shadow-none lg:shadow-sm">
+            <CardHeader className="p-0 lg:p-6">
+                <CardTitle className="hidden lg:block">Filters</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6 p-0 lg:p-6 lg:pt-0">
+                <div className="space-y-2">
+                    <Label htmlFor="search-filter">Search by Name or Location</Label>
+                    <Input
+                        id="search-filter"
+                        placeholder="e.g., 'Prestige Falcon City'"
+                        value={filters.search}
+                        onChange={handleSearchChange}
+                    />
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="type-filter">Property Type</Label>
+                    <Select
+                        value={filters.type || 'all'}
+                        onValueChange={handleTypeChange}
+                    >
+                        <SelectTrigger id="type-filter">
+                            <SelectValue placeholder="All Types" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Types</SelectItem>
+                            {propertyTypes.map((type) => (
+                                <SelectItem key={type.id} value={type.name}>{type.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <div className="space-y-4">
+                    <Label>Price Range</Label>
+                    <div className="flex justify-between text-sm text-muted-foreground mb-2">
+                        <span>{formatCurrency(filters.minPrice, 'INR')}</span>
+                        <span>{formatCurrency(filters.maxPrice, 'INR')}</span>
+                    </div>
+                    <Slider
+                        value={[filters.minPrice, filters.maxPrice]}
+                        onValueChange={handlePriceChange}
+                        min={PRICE_RANGE.min}
+                        max={PRICE_RANGE.max}
+                        step={PRICE_RANGE.step}
+                    />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                    <Button onClick={onApply}>Apply Filters</Button>
+                    <Button onClick={onReset} variant="outline">Reset Filters</Button>
+                </div>
+            </CardContent>
+        </Card>
+    );
+});
 
 
 export function FilterSidebar({ propertyTypes }) {
@@ -85,19 +162,6 @@ export function FilterSidebar({ propertyTypes }) {
     router.push(`/?${params.toString()}`, { scroll: false });
     if(isMobile) setIsSheetOpen(false);
   };
-
-
-  const handleTypeChange = (value) => {
-    setFilters(prev => ({ ...prev, type: value === 'all' ? '' : value }));
-  };
-
-  const handlePriceChange = (value) => {
-    setFilters(prev => ({ ...prev, minPrice: value[0], maxPrice: value[1] }));
-  };
-
-   const handleSearchChange = (event) => {
-    setFilters(prev => ({ ...prev, search: event.target.value }));
-  };
   
   const resetFilters = () => {
     const params = new URLSearchParams(searchParams.toString());
@@ -110,65 +174,13 @@ export function FilterSidebar({ propertyTypes }) {
     if(isMobile) setIsSheetOpen(false);
   }
 
-  const FilterContent = () => (
-    <Card className="sticky top-24 border-0 lg:border shadow-none lg:shadow-sm">
-      <CardHeader className="lg:hidden">
-        <CardTitle>Filters</CardTitle>
-      </CardHeader>
-       <CardHeader className="hidden lg:block">
-        <CardTitle>Filters</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-2">
-            <Label htmlFor="search-filter">Search by Name or Location</Label>
-            <Input 
-                id="search-filter"
-                placeholder="e.g., 'Prestige Falcon City'"
-                value={filters.search}
-                onChange={handleSearchChange}
-            />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="type-filter">Property Type</Label>
-          <Select
-            value={filters.type || 'all'}
-            onValueChange={handleTypeChange}
-          >
-            <SelectTrigger id="type-filter">
-              <SelectValue placeholder="All Types" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              {propertyTypes.map((type) => (
-                <SelectItem key={type.id} value={type.name}>{type.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-4">
-          <Label>Price Range</Label>
-           <div className="flex justify-between text-sm text-muted-foreground mb-2">
-            <span>{formatCurrency(filters.minPrice, 'INR')}</span>
-            <span>{formatCurrency(filters.maxPrice, 'INR')}</span>
-          </div>
-          <Slider
-            value={[filters.minPrice, filters.maxPrice]}
-            onValueChange={handlePriceChange}
-            min={PRICE_RANGE.min}
-            max={PRICE_RANGE.max}
-            step={PRICE_RANGE.step}
-          />
-        </div>
-
-        <div className="flex flex-col gap-2">
-            <Button onClick={applyFilters}>Apply Filters</Button>
-            <Button onClick={resetFilters} variant="outline">Reset Filters</Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  const commonProps = {
+    filters,
+    propertyTypes,
+    onFilterChange: setFilters,
+    onApply: applyFilters,
+    onReset: resetFilters
+  };
 
   if (!hasMounted) {
     return (
@@ -193,12 +205,12 @@ export function FilterSidebar({ propertyTypes }) {
                     <SheetTitle>Filters</SheetTitle>
                 </SheetHeader>
                 <div className="p-4">
-                    <FilterContent />
+                    <FilterContent {...commonProps} />
                 </div>
             </SheetContent>
         </Sheet>
     );
   }
 
-  return <FilterContent />;
+  return <FilterContent {...commonProps} />;
 }
