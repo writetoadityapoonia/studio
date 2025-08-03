@@ -611,31 +611,30 @@ const ImageSortableItemWrapper = ({ id, onRemove, children }) => {
 };
 
 
-export default function PropertyEditPage() {
+function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
   const router = useRouter();
   const params = useParams();
   const id = params.id;
   const { toast } = useToast();
-  const isNew = id === 'new';
   
   const [property, setProperty] = useState({
-      title: '',
-      location: '',
-      locationPoint: null,
-      developer: '',
-      price: 0,
-      type: '',
-      bedrooms: 0,
-      bathrooms: 0,
-      area: 0,
-      images: [],
-      description: '',
+      ...initialProperty,
+      title: initialProperty.title || '',
+      location: initialProperty.location || '',
+      locationPoint: initialProperty.locationPoint || null,
+      developer: initialProperty.developer || '',
+      price: initialProperty.price ?? 0,
+      type: initialProperty.type || '',
+      bedrooms: initialProperty.bedrooms ?? 0,
+      bathrooms: initialProperty.bathrooms ?? 0,
+      area: initialProperty.area ?? 0,
+      images: initialProperty.images || [],
+      description: initialProperty.description || '',
   });
+
   const [components, setComponents] = useState([]);
-  const [propertyTypes, setPropertyTypes] = useState([]);
   const [selectedComponentId, setSelectedComponentId] = useState(null);
   const [activeId, setActiveId] = useState(null);
-  const [loading, setLoading] = useState(!isNew);
   const [descriptionMode, setDescriptionMode] = useState('builder');
   const [showBedsBaths, setShowBedsBaths] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor));
@@ -649,52 +648,27 @@ export default function PropertyEditPage() {
     east: 78.58,
   };
 
-
   useEffect(() => {
-    getPropertyTypes().then(setPropertyTypes);
-
-    if (!isNew && id) {
-      getPropertyById(id).then(existingProperty => {
-        if (existingProperty) {
-          setProperty({
-            ...existingProperty,
-            images: existingProperty.images || [],
-            price: existingProperty.price ?? 0,
-            bedrooms: existingProperty.bedrooms ?? 0,
-            bathrooms: existingProperty.bathrooms ?? 0,
-            area: existingProperty.area ?? 0,
-            developer: existingProperty.developer ?? '',
-            type: existingProperty.type ?? ''
-          });
-          if (existingProperty.bedrooms > 0 || existingProperty.bathrooms > 0) {
-            setShowBedsBaths(true);
-          }
-          const initialComponents = parseDescription(existingProperty.description || '');
-          setComponents(initialComponents);
-        } else {
-          toast({ title: "Property not found", variant: "destructive" });
-          router.push('/admin');
-        }
-        setLoading(false);
-      });
+    if (initialProperty) {
+      if (initialProperty.bedrooms > 0 || initialProperty.bathrooms > 0) {
+        setShowBedsBaths(true);
+      }
+      const initialComponents = parseDescription(initialProperty.description || '');
+      setComponents(initialComponents);
     } else {
         const initialComponents = parseDescription('');
         setComponents(initialComponents);
         setProperty(p => ({...p, description: JSON.stringify(initialComponents)}));
     }
-  }, [id, isNew, router, toast]);
 
-  useEffect(() => {
     const savedMode = localStorage.getItem('property-editor-mode');
     if (savedMode) {
       setDescriptionMode(savedMode);
     }
-  }, []);
+  }, [initialProperty]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('property-editor-mode', descriptionMode);
-    }
+    localStorage.setItem('property-editor-mode', descriptionMode);
   }, [descriptionMode]);
 
   const selectedComponent = components.find(c => c.id === selectedComponentId) || null;
@@ -886,13 +860,8 @@ export default function PropertyEditPage() {
   };
 
   const activeComponentType = activeId && activeId.toString().startsWith('toolbox-') ? activeId.toString().split('-')[1] : null;
-  
-  if (loading && !isNew) {
-      return <div className="flex h-screen items-center justify-center">Loading...</div>
-  }
 
   return (
-    <ClientOnly>
       <DndContext onDragEnd={handleDragEnd} onDragStart={e => setActiveId(e.active.id.toString())} sensors={sensors}>
         <div className="flex flex-col h-screen bg-background text-foreground">
           <header className="flex items-center justify-between p-4 border-b">
@@ -1081,9 +1050,58 @@ export default function PropertyEditPage() {
           ) : null}
         </DragOverlay>
       </DndContext>
+  )
+}
+
+
+export default function PropertyEditPage() {
+  const params = useParams();
+  const id = params.id;
+  const { toast } = useToast();
+  const isNew = id === 'new';
+  
+  const [property, setProperty] = useState(null);
+  const [propertyTypes, setPropertyTypes] = useState([]);
+  const [loading, setLoading] = useState(!isNew);
+  
+
+  useEffect(() => {
+    getPropertyTypes().then(setPropertyTypes);
+
+    if (!isNew && id) {
+      setLoading(true);
+      getPropertyById(id).then(existingProperty => {
+        if (existingProperty) {
+          setProperty(existingProperty);
+        } else {
+          toast({ title: "Property not found", variant: "destructive" });
+        }
+        setLoading(false);
+      });
+    } else {
+        setProperty({});
+    }
+  }, [id, isNew, toast]);
+  
+  if (loading) {
+      return <div className="flex h-screen items-center justify-center">Loading...</div>
+  }
+  
+  if (!property && !isNew) {
+      return <div className="flex h-screen items-center justify-center">Property not found.</div>
+  }
+
+  return (
+    <ClientOnly>
+       <PropertyEditForm 
+            property={property}
+            propertyTypes={propertyTypes}
+            isNew={isNew}
+       />
     </ClientOnly>
   );
 }
 
     
+
 
