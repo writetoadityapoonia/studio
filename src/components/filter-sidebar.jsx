@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 import { SlidersHorizontal } from 'lucide-react';
-import { useDebounce } from '@/hooks/use-debounce';
 import { Input } from './ui/input';
 
 const PRICE_RANGE = {
@@ -36,10 +35,9 @@ export function FilterSidebar({ propertyTypes }) {
   
   const [hasMounted, setHasMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [filters, setFilters] = useState(() => getInitialFilters(searchParams));
 
-  const debouncedSearch = useDebounce(filters.search, 300);
-  
   useEffect(() => {
     setHasMounted(true);
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -62,8 +60,8 @@ export function FilterSidebar({ propertyTypes }) {
         params.delete('type');
     }
 
-    if (debouncedSearch) {
-        params.set('search', debouncedSearch);
+    if (filters.search) {
+        params.set('search', filters.search);
     } else {
         params.delete('search');
     }
@@ -85,6 +83,7 @@ export function FilterSidebar({ propertyTypes }) {
     params.set('page', '1');
 
     router.push(`/?${params.toString()}`, { scroll: false });
+    if(isMobile) setIsSheetOpen(false);
   };
 
 
@@ -108,10 +107,11 @@ export function FilterSidebar({ propertyTypes }) {
     params.delete('search');
     params.delete('page');
     router.push(`/?${params.toString()}`, { scroll: false });
+    if(isMobile) setIsSheetOpen(false);
   }
 
   const FilterContent = () => (
-    <Card className="sticky top-24">
+    <Card className="sticky top-24 border-0 lg:border shadow-none lg:shadow-sm">
       <CardHeader>
         <CardTitle>Filters</CardTitle>
       </CardHeader>
@@ -146,6 +146,10 @@ export function FilterSidebar({ propertyTypes }) {
 
         <div className="space-y-4">
           <Label>Price Range</Label>
+           <div className="flex justify-between text-sm text-muted-foreground mb-2">
+            <span>{formatCurrency(filters.minPrice, 'INR')}</span>
+            <span>{formatCurrency(filters.maxPrice, 'INR')}</span>
+          </div>
           <Slider
             value={[filters.minPrice, filters.maxPrice]}
             onValueChange={handlePriceChange}
@@ -153,10 +157,6 @@ export function FilterSidebar({ propertyTypes }) {
             max={PRICE_RANGE.max}
             step={PRICE_RANGE.step}
           />
-          <div className="flex justify-between text-sm text-muted-foreground">
-            <span>{formatCurrency(filters.minPrice, 'INR')}</span>
-            <span>{formatCurrency(filters.maxPrice, 'INR')}</span>
-          </div>
         </div>
 
         <div className="flex flex-col gap-2">
@@ -171,27 +171,22 @@ export function FilterSidebar({ propertyTypes }) {
     return (
         <Card className="sticky top-24">
             <CardHeader><CardTitle>Filters</CardTitle></CardHeader>
-            <CardContent><div className="h-64 w-full animate-pulse bg-muted rounded-md" /></CardContent>
+            <CardContent><div className="h-96 w-full animate-pulse bg-muted rounded-md" /></CardContent>
         </Card>
     );
   }
 
   if (isMobile) {
     return (
-        <Sheet>
+        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
                 <Button variant="outline" className="w-full">
                     <SlidersHorizontal className="mr-2" />
                     Filters
                 </Button>
             </SheetTrigger>
-            <SheetContent side="left">
-                <SheetHeader>
-                    <SheetTitle>Filters</SheetTitle>
-                </SheetHeader>
-                <div className="p-4">
-                    <FilterContent />
-                </div>
+            <SheetContent side="left" className="p-0">
+                <FilterContent />
             </SheetContent>
         </Sheet>
     );
