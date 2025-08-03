@@ -201,7 +201,10 @@ const CanvasComponent = ({ component, selected, onSelect, onDelete }) => {
       )}
     >
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-            <Button variant="ghost" size="icon" onClick={() => onDelete(component.id)}>
+            <Button variant="ghost" size="icon" onClick={(e) => {
+                e.stopPropagation();
+                onDelete(component.id);
+            }}>
                 <Trash2 className="w-4 h-4 text-destructive" />
             </Button>
         </div>
@@ -212,6 +215,7 @@ const CanvasComponent = ({ component, selected, onSelect, onDelete }) => {
 
 const Canvas = ({ components, selectedComponentId, onSelect, onDelete, onSort }) => {
   const { setNodeRef, isOver } = useDroppable({ id: 'canvas' });
+  const sensors = useSensors(useSensor(PointerSensor));
 
   function handleDragEnd(event) {
       const { active, over } = event;
@@ -225,7 +229,7 @@ const Canvas = ({ components, selectedComponentId, onSelect, onDelete, onSort })
   }
 
   return (
-    <DndContext onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
+    <DndContext onDragEnd={handleDragEnd} collisionDetection={closestCenter} sensors={sensors}>
       <SortableContext items={components.map(c => c.id)} strategy={rectSortingStrategy}>
         <div ref={setNodeRef} id="canvas" className={cn("w-full h-full bg-muted/30 rounded-lg p-8 space-y-2 overflow-y-auto", {"bg-primary/10": isOver})}>
           {components.length > 0 ? (
@@ -658,17 +662,20 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
   };
 
   useEffect(() => {
-      const initialComponents = parseDescription(initialProperty.description || '');
-      setComponents(initialComponents);
+    const initialComponents = parseDescription(initialProperty.description || '[]');
+    setComponents(initialComponents);
 
-      if (initialProperty.bedrooms > 0 || initialProperty.bathrooms > 0) {
-        setShowBedsBaths(true);
-      }
-      const savedMode = localStorage.getItem('property-editor-mode');
-      if (savedMode) {
-        setDescriptionMode(savedMode);
-      }
+    if (initialProperty.bedrooms > 0 || initialProperty.bathrooms > 0) {
+      setShowBedsBaths(true);
+    }
   }, [initialProperty]);
+
+  useEffect(() => {
+    const savedMode = localStorage.getItem('property-editor-mode');
+    if (savedMode) {
+      setDescriptionMode(savedMode);
+    }
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('property-editor-mode', descriptionMode);
@@ -724,7 +731,7 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
             const overIndex = overId === 'canvas' ? prev.length : prev.findIndex(c => c.id === overId);
             const newItems = [...prev];
             if (overIndex !== -1) {
-                 newItems.splice(overIndex, 0, newComponent);
+                 newItems.splice(overIndex + 1, 0, newComponent);
             } else {
                  newItems.push(newComponent);
             }
@@ -742,13 +749,6 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
     if (active.id.toString().startsWith('toolbox-')) {
         handleAddComponent(active.data.current?.type, over.id);
         return;
-    }
-    
-    if (active.id !== over.id) {
-        const oldIndex = components.findIndex(item => item.id === active.id);
-        const newIndex = components.findIndex(item => item.id === over.id);
-        if (oldIndex === -1 || newIndex === -1) return;
-        handleSortComponents(oldIndex, newIndex);
     }
   };
   
@@ -1118,5 +1118,7 @@ export default function PropertyEditPage() {
     </ClientOnly>
   );
 }
+
+    
 
     
