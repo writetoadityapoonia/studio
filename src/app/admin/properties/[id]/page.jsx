@@ -213,6 +213,13 @@ const CanvasComponent = ({ component, selected, onSelect, onDelete }) => {
 const Canvas = ({ components, setComponents, selectedComponentId, setSelectedComponentId }) => {
   const { setNodeRef, isOver } = useDroppable({ id: 'canvas' });
 
+  const handleDelete = (componentId) => {
+    setComponents(prev => prev.filter(c => c.id !== componentId));
+    if (selectedComponentId === componentId) {
+        setSelectedComponentId(null);
+    }
+  };
+
   return (
     <SortableContext items={components.map(c => c.id)} strategy={rectSortingStrategy}>
       <div ref={setNodeRef} id="canvas" className={cn("w-full h-full bg-muted/30 rounded-lg p-8 space-y-2 overflow-y-auto", {"bg-primary/10": isOver})}>
@@ -223,12 +230,7 @@ const Canvas = ({ components, setComponents, selectedComponentId, setSelectedCom
                 component={component}
                 selected={selectedComponentId === component.id}
                 onSelect={() => setSelectedComponentId(component.id)}
-                onDelete={() => {
-                  setComponents(prev => prev.filter(c => c.id !== component.id));
-                  if (selectedComponentId === component.id) {
-                    setSelectedComponentId(null);
-                  }
-                }}
+                onDelete={() => handleDelete(component.id)}
               />
             </SortableItem>
           ))
