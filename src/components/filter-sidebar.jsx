@@ -116,10 +116,10 @@ export function FilterSidebar({ propertyTypes }) {
   const [filters, setFilters] = useState(() => getInitialFilters(searchParams));
 
   useEffect(() => {
-    setHasMounted(true);
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
     checkMobile();
     window.addEventListener('resize', checkMobile);
+    setHasMounted(true);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
