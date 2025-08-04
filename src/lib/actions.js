@@ -85,6 +85,34 @@ export async function deleteProperty(id) {
     revalidatePath('/');
 }
 
+export async function bulkDeleteProperties(ids) {
+    if (!Array.isArray(ids) || ids.length === 0) {
+        throw new Error("No property IDs provided for deletion.");
+    }
+    const objectIds = ids.map(id => {
+        if (!ObjectId.isValid(id)) {
+            throw new Error(`Invalid ID format: ${id}`);
+        }
+        return new ObjectId(id);
+    });
+
+    const collection = await getPropertiesCollection();
+    const result = await collection.deleteMany({ _id: { $in: objectIds } });
+
+    if (result.deletedCount === 0) {
+        throw new Error("No properties found to delete.");
+    }
+    
+    if (result.deletedCount < ids.length) {
+         console.warn(`Warning: Not all selected properties were deleted. Expected ${ids.length}, deleted ${result.deletedCount}.`);
+    }
+
+    revalidatePath('/admin');
+    revalidatePath('/');
+
+    return { success: true, deletedCount: result.deletedCount };
+}
+
 export async function createEnquiry(enquiryData) {
     const collection = await getEnquiriesCollection();
     
