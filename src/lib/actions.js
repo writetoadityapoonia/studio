@@ -33,6 +33,24 @@ export async function createProperty(propertyData) {
     revalidatePath('/');
 }
 
+export async function bulkCreateProperties(propertiesData) {
+    const collection = await getPropertiesCollection();
+    if (!Array.isArray(propertiesData) || propertiesData.length === 0) {
+        throw new Error('No properties to upload.');
+    }
+    const result = await collection.insertMany(propertiesData);
+
+    if (result.insertedCount !== propertiesData.length) {
+        throw new Error('Some properties failed to upload.');
+    }
+
+    revalidatePath('/admin');
+    revalidatePath('/');
+
+    return { success: true, insertedCount: result.insertedCount };
+}
+
+
 export async function updateProperty(propertyData) {
     const collection = await getPropertiesCollection();
     const { id, ...dataToUpdate } = propertyData;
