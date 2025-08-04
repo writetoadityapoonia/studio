@@ -67,16 +67,16 @@ You must use the following component types and schemas:
 4.  **Return JSON only**: Your entire output must be a single, valid JSON array.
 
 **Example Input HTML:**
-"<h1>Sunshine Apartments</h1><p>A beautiful place to live with <strong>2 bedrooms</strong> and a great city view. It is <i>1200 sqft</i>.</p><hr><h2>Amenities</h2><ul><li>Swimming Pool</li><li>Gym</li></ul>"
+\`<h1>Sunshine Apartments</h1><p>A beautiful place to live with <strong>2 bedrooms</strong> and a great city view. It is <i>1200 sqft</i>.</p><hr><h2>Amenities</h2><ul><li>Swimming Pool</li><li>Gym</li></ul>\`
 
 **Example Output JSON:**
-[
+\`[
   {"id": "a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6", "type": "Text", "text": "Sunshine Apartments", "size": "xl", "align": "left", "color": "default", "style": ["bold"]},
   {"id": "b2c3d4e5-f6a7-b8c9-d0e1-f2a3b4c5d6e7", "type": "Text", "text": "A beautiful place to live with 2 bedrooms and a great city view. It is 1200 sqft.", "size": "md", "align": "left", "color": "default", "style": []},
   {"id": "c3d4e5f6-a7b8-c9d0-e1f2-a3b4c5d6e7f8", "type": "Divider"},
   {"id": "d4e5f6a7-b8c9-d0e1-f2a3-b4c5d6e7f8g9", "type": "Text", "text": "Amenities", "size": "lg", "align": "left", "color": "default", "style": ["bold"]},
   {"id": "e5f6a7b8-c9d0-e1f2-a3b4-c5d6e7f8g9h0", "type": "Text", "text": "- Swimming Pool\\n- Gym", "size": "md", "align": "left", "color": "default", "style": []}
-]
+]\`
 `;
 
 
@@ -1151,3 +1151,5 @@ export default function PropertyEditPage() {
     </ClientOnly>
   );
 }
+
+    
