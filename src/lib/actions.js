@@ -2,65 +2,54 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { connectToDatabase } from './mongodb';
-import { ObjectId } from 'mongodb';
-
-async function getPropertiesCollection() {
-    const db = await connectToDatabase();
-    return db.collection('properties');
-}
+import connectToDatabase from './mongoose';
+import Property from '../models/property';
+import { ObjectId } from 'mongodb'; // Keep for enquiries
 
 async function getEnquiriesCollection() {
-    const db = await connectToDatabase();
-    return db.collection('enquiries');
+    // For now, keep enquiries in native mongo driver
+    const { connection } = await connectToDatabase();
+    return connection.db.collection('enquiries');
 }
 
 async function getPropertyTypesCollection() {
-    const db = await connectToDatabase();
-    return db.collection('property_types');
+    const { connection } = await connectToDatabase();
+    return connection.db.collection('property_types');
 }
 
 
 export async function createProperty(propertyData) {
-    const collection = await getPropertiesCollection();
-    const result = await collection.insertOne(propertyData);
-    
-    if (!result.insertedId) {
-        throw new Error('Failed to create property');
-    }
+    await connectToDatabase();
+    const newProperty = new Property(propertyData);
+    await newProperty.save();
 
     revalidatePath('/admin');
     revalidatePath('/');
 }
 
 export async function bulkCreateProperties(propertiesData) {
-    const collection = await getPropertiesCollection();
+    await connectToDatabase();
     if (!Array.isArray(propertiesData) || propertiesData.length === 0) {
         throw new Error('No properties to upload.');
     }
-    const result = await collection.insertMany(propertiesData);
+    const result = await Property.insertMany(propertiesData);
 
-    if (result.insertedCount !== propertiesData.length) {
+    if (result.length !== propertiesData.length) {
         throw new Error('Some properties failed to upload.');
     }
 
     revalidatePath('/admin');
     revalidatePath('/');
 
-    return { success: true, insertedCount: result.insertedCount };
+    return { success: true, insertedCount: result.length };
 }
 
 
-export async function updateProperty(propertyData) {
-    const collection = await getPropertiesCollection();
-    const { id, ...dataToUpdate } = propertyData;
-    
-    const result = await collection.updateOne(
-        { _id: new ObjectId(id) },
-        { $set: dataToUpdate }
-    );
+export async function updateProperty({ id, ...propertyData }) {
+    await connectToDatabase();
+    const result = await Property.findByIdAndUpdate(id, propertyData, { new: true });
 
-    if (result.matchedCount === 0) {
+    if (!result) {
         throw new Error("Property not found");
     }
 
@@ -71,13 +60,10 @@ export async function updateProperty(propertyData) {
 
 
 export async function deleteProperty(id) {
-    if (!ObjectId.isValid(id)) {
-        throw new Error("Invalid ID format");
-    }
-    const collection = await getPropertiesCollection();
-    const result = await collection.deleteOne({ _id: new ObjectId(id) });
+    await connectToDatabase();
+    const result = await Property.findByIdAndDelete(id);
 
-    if (result.deletedCount === 0) {
+    if (!result) {
         throw new Error("Property not found");
     }
 
@@ -86,18 +72,12 @@ export async function deleteProperty(id) {
 }
 
 export async function bulkDeleteProperties(ids) {
+    await connectToDatabase();
     if (!Array.isArray(ids) || ids.length === 0) {
         throw new Error("No property IDs provided for deletion.");
     }
-    const objectIds = ids.map(id => {
-        if (!ObjectId.isValid(id)) {
-            throw new Error(`Invalid ID format: ${id}`);
-        }
-        return new ObjectId(id);
-    });
 
-    const collection = await getPropertiesCollection();
-    const result = await collection.deleteMany({ _id: { $in: objectIds } });
+    const result = await Property.deleteMany({ _id: { $in: ids } });
 
     if (result.deletedCount === 0) {
         throw new Error("No properties found to delete.");
@@ -116,7 +96,6 @@ export async function bulkDeleteProperties(ids) {
 export async function createEnquiry(enquiryData) {
     const collection = await getEnquiriesCollection();
     
-    // Convert propertyId string to ObjectId for better query performance
     const enquiryToInsert = {
         ...enquiryData,
         propertyId: new ObjectId(enquiryData.propertyId),
@@ -129,14 +108,12 @@ export async function createEnquiry(enquiryData) {
         throw new Error('Failed to create enquiry');
     }
 
-    // Revalidate the admin page for the property to show the new enquiry
     revalidatePath(`/admin/enquiries`);
 }
 
 
 export async function createPropertyType(typeData) {
     const collection = await getPropertyTypesCollection();
-    // Check if a type with the same name already exists to prevent duplicates
     const existingType = await collection.findOne({ name: typeData.name });
     if (existingType) {
         throw new Error(`A property type with the name "${typeData.name}" already exists.`);
@@ -150,9 +127,6 @@ export async function createPropertyType(typeData) {
 }
 
 export async function deletePropertyType(id) {
-    if (!ObjectId.isValid(id)) {
-        throw new Error("Invalid ID format");
-    }
     const collection = await getPropertyTypesCollection();
     const result = await collection.deleteOne({ _id: new ObjectId(id) });
 

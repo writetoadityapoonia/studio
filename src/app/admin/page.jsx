@@ -205,7 +205,7 @@ export default function AdminDashboard() {
                                         />
                                     </TableCell>
                                     <TableCell className="font-medium">{property.title}</TableCell>
-                                    <TableCell>{property.location}</TableCell>
+                                    <TableCell>{property.location.address}</TableCell>
                                     <TableCell>{formatCurrency(property.price, 'INR')}</TableCell>
                                     <TableCell className="text-right space-x-2">
                                         <Link href={`/admin/properties/${property.id}`}>

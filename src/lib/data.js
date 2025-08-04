@@ -1,44 +1,33 @@
 
-
 'use server';
 
-import { connectToDatabase } from './mongodb';
-import { ObjectId } from 'mongodb';
-
-async function getPropertiesCollection() {
-    const db = await connectToDatabase();
-    const collection = db.collection('properties');
-    // Ensure indexes exist for faster queries
-    await Promise.all([
-        collection.createIndex({ locationPoint: '2dsphere' }),
-        collection.createIndex({ type: 1, price: 1, _id: -1 }),
-        collection.createIndex({ price: 1, _id: -1 })
-    ]);
-    return collection;
-}
+import connectToDatabase from './mongoose';
+import Property from '../models/property';
+import { ObjectId } from 'mongodb'; // Keep for enquiries
 
 async function getEnquiriesCollection() {
-    const db = await connectToDatabase();
-    const collection = db.collection('enquiries');
-    await collection.createIndex({ propertyId: 1, createdAt: -1 });
-    return collection;
+    const { connection } = await connectToDatabase();
+    return connection.db.collection('enquiries');
 }
 
 async function getPropertyTypesCollection() {
-    const db = await connectToDatabase();
-    return db.collection('property_types');
+    const { connection } = await connectToDatabase();
+    return connection.db.collection('property_types');
 }
 
 function processDocument(doc) {
     if (!doc) return null;
-    const { _id, ...rest } = doc;
-    return { ...rest, id: _id.toString() };
+    const plainDoc = doc.toObject({ virtuals: true });
+    plainDoc.id = plainDoc._id.toString();
+    delete plainDoc._id;
+    delete plainDoc.__v;
+    return plainDoc;
 }
 
 
 export async function getProperties(searchParams = {}) {
+  await connectToDatabase();
   const { lat, lng, type, minPrice, maxPrice, limit, page = 1 } = searchParams;
-  const collection = await getPropertiesCollection();
   
   let query = {};
 
@@ -48,7 +37,7 @@ export async function getProperties(searchParams = {}) {
       const radiusInMeters = 15 * 1000; // 15km
 
       if (!isNaN(latitude) && !isNaN(longitude)) {
-        query.locationPoint = {
+        query['location.coordinates'] = {
             $near: {
                 $geometry: {
                     type: "Point",
@@ -61,7 +50,7 @@ export async function getProperties(searchParams = {}) {
   }
 
   if (type) {
-      query.type = type;
+      query.propertyType = type;
   }
   
   if (minPrice || maxPrice) {
@@ -74,25 +63,25 @@ export async function getProperties(searchParams = {}) {
       }
   }
   
-  let cursor = collection.find(query).sort({ _id: -1 });
+  let queryBuilder = Property.find(query).sort({ createdAt: -1 });
 
   if (limit) {
       const parsedLimit = parseInt(limit, 10);
       const parsedPage = parseInt(page, 10);
-      cursor = cursor.skip((parsedPage - 1) * parsedLimit).limit(parsedLimit);
+      queryBuilder = queryBuilder.skip((parsedPage - 1) * parsedLimit).limit(parsedLimit);
   }
 
-  const properties = await cursor.toArray();
+  const properties = await queryBuilder.exec();
   return properties.map(p => processDocument(p));
 }
 
 export async function getPropertyById(id) {
-  if (!ObjectId.isValid(id)) {
-      return null;
-  }
-  const collection = await getPropertiesCollection();
-  const property = await collection.findOne({ _id: new ObjectId(id) });
-  return processDocument(property);
+    await connectToDatabase();
+    if (!ObjectId.isValid(id)) {
+        return null;
+    }
+    const property = await Property.findById(id);
+    return processDocument(property);
 }
 
 export async function getEnquiriesForProperty(propertyId) {
@@ -101,7 +90,7 @@ export async function getEnquiriesForProperty(propertyId) {
     }
     const collection = await getEnquiriesCollection();
     const enquiries = await collection.find({ propertyId: new ObjectId(propertyId) }).sort({ createdAt: -1 }).toArray();
-    return enquiries.map(e => processDocument(e));
+    return enquiries.map(e => ({ ...e, id: e._id.toString() }));
 }
 
 export async function getAllEnquiriesWithPropertyInfo() {
@@ -110,7 +99,7 @@ export async function getAllEnquiriesWithPropertyInfo() {
         { $sort: { createdAt: -1 } },
         {
             $lookup: {
-                from: 'properties',
+                from: 'properties', // collection name is 'properties'
                 localField: 'propertyId',
                 foreignField: '_id',
                 as: 'propertyInfo'
@@ -146,5 +135,5 @@ export async function getAllEnquiriesWithPropertyInfo() {
 export async function getPropertyTypes() {
   const collection = await getPropertyTypesCollection();
   const types = await collection.find({}).sort({ name: 1 }).toArray();
-  return types.map(t => processDocument(t));
+  return types.map(t => ({...t, id: t._id.toString()}));
 }

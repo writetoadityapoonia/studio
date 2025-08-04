@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -29,7 +28,12 @@ import { Separator } from '@/components/ui/separator';
 import { CldUploadWidget } from 'next-cloudinary';
 import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '@/lib/cloudinary';
 import Autocomplete from 'react-google-autocomplete';
+import { Checkbox } from '@/components/ui/checkbox';
 
+const AVAILABLE_AMENITIES = [
+    "Swimming Pool", "Gymnasium", "Clubhouse", "24x7 Security", "Power Backup", 
+    "Lifts", "Car Parking", "Children's Play Area", "Garden", "Intercom"
+];
 
 const AI_PROMPT = `You are an expert content migration specialist. Your task is to take raw text or HTML and convert it into a structured JSON array that can be used by a web application's description builder.
 
@@ -632,6 +636,24 @@ function DeleteDropzone({ visible }) {
     );
 }
 
+const defaultPropertyState = {
+    title: '',
+    location: { address: '', locality: '', lat: 0, lng: 0 },
+    bhk: '1BHK',
+    price: 0,
+    propertyType: '',
+    builtUpArea: 0,
+    furnishing: 'Unfurnished',
+    projectName: '',
+    description: '[]',
+    images: [],
+    floor: 0,
+    age: 'New',
+    facing: 'North',
+    amenities: [],
+    ownerContact: '',
+};
+
 function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
   const router = useRouter();
   const params = useParams();
@@ -639,25 +661,15 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
   const { toast } = useToast();
   
   const [property, setProperty] = useState({
+      ...defaultPropertyState,
       ...initialProperty,
-      title: initialProperty.title || '',
-      location: initialProperty.location || '',
-      locationPoint: initialProperty.locationPoint || null,
-      developer: initialProperty.developer || '',
-      price: initialProperty.price ?? 0,
-      type: initialProperty.type || '',
-      bedrooms: initialProperty.bedrooms ?? 0,
-      bathrooms: initialProperty.bathrooms ?? 0,
-      area: initialProperty.area ?? 0,
-      images: initialProperty.images || [],
-      description: initialProperty.description || '',
+      location: { ...defaultPropertyState.location, ...initialProperty?.location }
   });
 
   const [components, setComponents] = useState([]);
   const [selectedComponentId, setSelectedComponentId] = useState(null);
   const [activeId, setActiveId] = useState(null);
   const [descriptionMode, setDescriptionMode] = useState('builder');
-  const [showBedsBaths, setShowBedsBaths] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor));
   
   const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -672,10 +684,6 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
   useEffect(() => {
     const initialComponents = parseDescription(initialProperty.description || '[]');
     setComponents(initialComponents);
-
-    if (initialProperty.bedrooms > 0 || initialProperty.bathrooms > 0) {
-      setShowBedsBaths(true);
-    }
   }, [initialProperty]);
 
   useEffect(() => {
@@ -809,7 +817,7 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
         console.error("Save error:", error);
         toast({
             title: "Error Saving Property",
-            description: "There was an error saving the property details. Check console for details.",
+            description: error.message || "There was an error saving the property details.",
             variant: "destructive",
         });
     }
@@ -817,7 +825,7 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
   
   const handleInputChange = (e) => {
       const { name, value } = e.target;
-      const isNumericField = ['price', 'bedrooms', 'bathrooms', 'area'].includes(name);
+      const isNumericField = ['price', 'builtUpArea', 'floor'].includes(name);
 
       setProperty(prev => ({ 
           ...prev, 
@@ -852,12 +860,17 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
     }
   }
 
-  const handleBedsBathsToggle = (checked) => {
-    setShowBedsBaths(checked);
-    if (!checked) {
-      setProperty(prev => ({ ...prev, bedrooms: 0, bathrooms: 0 }));
-    }
+  const handleAmenityChange = (amenity, checked) => {
+    setProperty(prev => {
+        const currentAmenities = prev.amenities || [];
+        if (checked) {
+            return { ...prev, amenities: [...currentAmenities, amenity] };
+        } else {
+            return { ...prev, amenities: currentAmenities.filter(a => a !== amenity) };
+        }
+    });
   }
+
 
   const handleImageUpload = (result) => {
       setProperty(prev => ({
@@ -884,12 +897,17 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
     if (place.geometry) {
         const lat = place.geometry.location.lat();
         const lng = place.geometry.location.lng();
+        const localityComponent = place.address_components.find(c => c.types.includes('locality'));
+        const locality = localityComponent ? localityComponent.long_name : '';
+        
         setProperty(prev => ({
             ...prev,
-            location: place.formatted_address,
-            locationPoint: {
-                type: 'Point',
-                coordinates: [lng, lat],
+            location: {
+                ...prev.location,
+                address: place.formatted_address,
+                locality,
+                lat,
+                lng
             }
         }));
     }
@@ -913,20 +931,14 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
               <div className="flex flex-col overflow-y-auto p-6 space-y-6">
                  <Card>
                     <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <CardTitle>Property Details</CardTitle>
-                            <div className="flex items-center space-x-2">
-                                <Switch id="show-beds-baths" checked={showBedsBaths} onCheckedChange={handleBedsBathsToggle} />
-                                <Label htmlFor="show-beds-baths">Show Bed/Bath</Label>
-                            </div>
-                        </div>
+                        <CardTitle>Core Details</CardTitle>
                     </CardHeader>
                      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-2">
+                          <div className="space-y-2 md:col-span-2">
                               <Label htmlFor="title">Title</Label>
                               <Input id="title" name="title" value={property.title || ''} onChange={handleInputChange} />
                           </div>
-                           <div className="space-y-2">
+                           <div className="space-y-2 md:col-span-2">
                               <Label htmlFor="location">Location Search</Label>
                               {GOOGLE_MAPS_API_KEY ? (
                                 <Autocomplete
@@ -938,35 +950,35 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
                                         bounds: karnatakaBounds,
                                         strictBounds: false
                                     }}
-                                    defaultValue={property.location || ''}
+                                    defaultValue={property.location?.address || ''}
                                     className={cn(
                                       "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                                     )}
                                 />
                                ) : (
-                                 <Input id="location" name="location" value={property.location || ''} onChange={handleInputChange} />
+                                 <Input name="location.address" value={property.location?.address || ''} onChange={(e) => setProperty(p => ({...p, location: {...p.location, address: e.target.value}}))} />
                                )}
-                                 {property.locationPoint?.coordinates && (
+                                 {property.location?.lat && (
                                      <div className="mt-2 text-sm text-muted-foreground">
-                                         Lat: {property.locationPoint.coordinates[1].toFixed(4)}, Lng: {property.locationPoint.coordinates[0].toFixed(4)}
+                                         Lat: {property.location.lat.toFixed(4)}, Lng: {property.location.lng.toFixed(4)}
                                      </div>
                                  )}
                           </div>
                            <div className="space-y-2">
-                              <Label htmlFor="developer">Developer</Label>
-                              <Input id="developer" name="developer" value={property.developer || ''} onChange={handleInputChange} />
+                              <Label htmlFor="projectName">Project Name</Label>
+                              <Input id="projectName" name="projectName" value={property.projectName || ''} onChange={handleInputChange} />
                           </div>
                           <div className="space-y-2">
                               <Label htmlFor="price">Price (in INR)</Label>
                               <Input id="price" name="price" type="number" value={property.price || 0} onChange={handleInputChange} />
                           </div>
                            <div className="space-y-2">
-                              <Label htmlFor="type">Type</Label>
+                              <Label htmlFor="propertyType">Property Type</Label>
                               <Select 
-                                value={property.type || ''} 
-                                onValueChange={(value) => setProperty(prev => ({ ...prev, type: value }))}
+                                value={property.propertyType || ''} 
+                                onValueChange={(value) => setProperty(prev => ({ ...prev, propertyType: value }))}
                               >
-                                <SelectTrigger id="type">
+                                <SelectTrigger id="propertyType">
                                     <SelectValue placeholder="Select a property type" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -976,26 +988,77 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
                                 </SelectContent>
                               </Select>
                           </div>
-                          
-                          {showBedsBaths && (
-                            <>
-                                <div className="space-y-2">
-                                    <Label htmlFor="bedrooms">Bedrooms</Label>
-                                    <Input id="bedrooms" name="bedrooms" type="number" value={property.bedrooms || 0} onChange={handleInputChange} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="bathrooms">Bathrooms</Label>
-                                    <Input id="bathrooms" name="bathrooms" type="number" value={property.bathrooms || 0} onChange={handleInputChange} />
-                                </div>
-                            </>
-                          )}
-
-                          <div className={cn("space-y-2", !showBedsBaths ? "md:col-span-1" : "")}>
-                              <Label htmlFor="area">Area (sqft)</Label>
-                              <Input id="area" name="area" type="number" value={property.area || 0} onChange={handleInputChange} />
+                          <div className="space-y-2">
+                              <Label htmlFor="builtUpArea">Built-up Area (sqft)</Label>
+                              <Input id="builtUpArea" name="builtUpArea" type="number" value={property.builtUpArea || 0} onChange={handleInputChange} />
                           </div>
+                          <div className="space-y-2">
+                              <Label htmlFor="bhk">BHK</Label>
+                               <Select value={property.bhk} onValueChange={(value) => setProperty(prev => ({...prev, bhk: value}))}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {['1BHK', '2BHK', '3BHK', '4BHK', '5BHK+'].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                                </SelectContent>
+                               </Select>
+                          </div>
+                          <div className="space-y-2">
+                              <Label htmlFor="furnishing">Furnishing</Label>
+                               <Select value={property.furnishing} onValueChange={(value) => setProperty(prev => ({...prev, furnishing: value}))}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {['Unfurnished', 'Semi-Furnished', 'Fully-Furnished'].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                                </SelectContent>
+                               </Select>
+                          </div>
+                          <div className="space-y-2">
+                              <Label htmlFor="floor">Floor</Label>
+                              <Input id="floor" name="floor" type="number" value={property.floor || 0} onChange={handleInputChange} />
+                          </div>
+                          <div className="space-y-2">
+                              <Label htmlFor="age">Age of Property</Label>
+                              <Select value={property.age} onValueChange={(value) => setProperty(prev => ({...prev, age: value}))}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {['New', '0-1 Years', '1-3 Years', '3-5 Years', '5+ Years'].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                                </SelectContent>
+                               </Select>
+                          </div>
+                           <div className="space-y-2">
+                              <Label htmlFor="facing">Facing</Label>
+                              <Select value={property.facing} onValueChange={(value) => setProperty(prev => ({...prev, facing: value}))}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {['North', 'South', 'East', 'West', 'North-East', 'North-West', 'South-East', 'South-West'].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                                </SelectContent>
+                               </Select>
+                          </div>
+                          <div className="space-y-2">
+                              <Label htmlFor="ownerContact">Owner Contact</Label>
+                              <Input id="ownerContact" name="ownerContact" value={property.ownerContact || ''} onChange={handleInputChange} />
+                          </div>
+
                      </CardContent>
                  </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Amenities</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {AVAILABLE_AMENITIES.map(amenity => (
+                            <div key={amenity} className="flex items-center space-x-2">
+                                <Checkbox
+                                    id={`amenity-${amenity}`}
+                                    checked={property.amenities?.includes(amenity)}
+                                    onCheckedChange={(checked) => handleAmenityChange(amenity, checked)}
+                                />
+                                <label htmlFor={`amenity-${amenity}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                    {amenity}
+                                </label>
+                            </div>
+                        ))}
+                    </CardContent>
+                </Card>
 
                 <Card>
                     <CardHeader>
@@ -1151,5 +1214,3 @@ export default function PropertyEditPage() {
     </ClientOnly>
   );
 }
-
-    

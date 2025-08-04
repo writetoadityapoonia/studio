@@ -14,10 +14,10 @@ import { bulkCreateProperties } from '@/lib/actions';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 
-const CSV_TEMPLATE_HEADERS = ['title', 'location', 'developer', 'price', 'type', 'bedrooms', 'bathrooms', 'area', 'images', 'description'];
+const CSV_TEMPLATE_HEADERS = ['title', 'address', 'locality', 'lat', 'lng', 'bhk', 'price', 'propertyType', 'builtUpArea', 'furnishing', 'projectName', 'description', 'images', 'floor', 'age', 'facing', 'amenities', 'ownerContact'];
 const CSV_TEMPLATE_DATA = [
-    ['Elegant 3BHK Apartment', 'Koramangala, Bengaluru', 'Prestige Group', 15000000, 'Apartment', 3, 2, 1600, 'https://placehold.co/800x600.png,https://placehold.co/800x600.png', '[{"id":"a1b2c3d4","type":"Text","text":"A beautiful apartment."}]'],
-    ['Luxury Villa with Pool', 'Whitefield, Bengaluru', 'Sobha Ltd', 50000000, 'Villa', 4, 4, 3500, 'https://placehold.co/800x600.png', '[]']
+    ['Elegant 3BHK Apartment', '123 Main St, Koramangala, Bengaluru, Karnataka 560034, India', 'Koramangala', 12.9357, 77.6245, '3BHK', 15000000, 'Apartment', 1600, 'Semi-Furnished', 'Prestige Pinewood', '[{"id":"a1b2c3d4","type":"Text","text":"A beautiful apartment."}]', 'https://placehold.co/800x600.png,https://placehold.co/800x600.png', 5, '1-3 Years', 'East', 'Swimming Pool,Gymnasium', '9876543210'],
+    ['Luxury Villa with Pool', '456 Whitefield Rd, Whitefield, Bengaluru, Karnataka 560066, India', 'Whitefield', 12.9698, 77.7500, '4BHK', 50000000, 'Villa', 3500, 'Fully-Furnished', 'Sobha Windsor', '[]', 'https://placehold.co/800x600.png', 2, '0-1 Years', 'North', 'Swimming Pool,Clubhouse,24x7 Security', '9876543211']
 ];
 
 const AI_PROMPT = `You are an expert real estate data entry specialist and content migrator. Your task is to convert unstructured text or HTML describing multiple properties into a structured CSV format.
@@ -25,47 +25,39 @@ const AI_PROMPT = `You are an expert real estate data entry specialist and conte
 **Your Goal:** Convert the provided text into a single, valid CSV string. The first line of the CSV must be the header row, and all subsequent rows will be the property data.
 
 **CSV Headers (must be in this order):**
-\`title,location,developer,price,type,bedrooms,bathrooms,area,images,description\`
+\`title,address,locality,lat,lng,bhk,price,propertyType,builtUpArea,furnishing,projectName,description,images,floor,age,facing,amenities,ownerContact\`
 
 **Column Instructions:**
 
 1.  **title**: The main title of the property listing.
-2.  **location**: The address or neighborhood of the property.
-3.  **developer**: The name of the construction company or developer.
-4.  **price**: The price of the property in Indian Rupees (INR). Provide this as a number without commas or currency symbols (e.g., \`15000000\`).
-5.  **type**: The type of property (e.g., 'Apartment', 'Villa', 'Plot').
-6.  **bedrooms**: The number of bedrooms.
-7.  **bathrooms**: The number of bathrooms.
-8.  **area**: The size of the property in square feet (sqft).
-9.  **images**: A comma-separated list of image URLs. For placeholders, use \`https://placehold.co/800x600.png\`.
-10. **description (Important!)**: This must be a JSON array representing the property's detailed description. If the source text contains HTML or rich formatting, you must convert it to the JSON format specified below. If no description is available, use an empty array: \`[]\`.
+2.  **address**: The full address of the property.
+3.  **locality**: The neighborhood or locality.
+4.  **lat**: Latitude coordinate.
+5.  **lng**: Longitude coordinate.
+6.  **bhk**: Configuration like '2BHK', '3BHK'.
+7.  **price**: Price in numbers, no commas or currency symbols (e.g., \`15000000\`).
+8.  **propertyType**: 'Apartment', 'Villa', 'Plot', etc.
+9.  **builtUpArea**: Area in square feet, numbers only.
+10. **furnishing**: 'Unfurnished', 'Semi-Furnished', or 'Fully-Furnished'.
+11. **projectName**: The name of the building or project.
+12. **description (Important!)**: This must be a JSON array representing the property's detailed description. If the source text contains HTML or rich formatting, you must convert it to the specified JSON format. For no description, use an empty array: \`[]\`.
+13. **images**: A comma-separated list of image URLs. For placeholders, use \`https://placehold.co/800x600.png\`.
+14. **floor**: The floor number of the property.
+15. **age**: Age of the property (e.g., 'New', '1-3 Years').
+16. **facing**: Direction the property faces (e.g., 'North', 'East').
+17. **amenities**: A comma-separated list of amenities (e.g., 'Swimming Pool,Gymnasium').
+18. **ownerContact**: The owner's phone number.
+
 
 **Description JSON Schema:**
-
 *   **Text**: \`{ "id": "uuid", "type": "Text", "text": "...", "size": "sm|md|lg|xl", "align": "left|center|right", "color": "default|primary|muted", "style": ["bold", "italic"] }\`
 *   **Table**: \`{ "id": "uuid", "type": "Table", "headers": ["Header1"], "rows": [["r1c1"]] }\`
 *   **Image**: \`{ "id": "uuid", "type": "Image", "src": "url", "alt": "description" }\`
 *   **Spacer**: \`{ "id": "uuid", "type": "Spacer", "size": "sm|md|lg" }\`
 *   **Divider**: \`{ "id": "uuid", "type": "Divider" }\`
-
-**Conversion Logic:**
-*   Map \`<h1>\`, \`<h2>\` to "Text" components with appropriate sizes.
-*   Map \`<p>\` tags to "Text" components.
-*   Map \`<b>\` or \`<strong>\` to \`"style": ["bold"]\` in Text components.
-*   Map lists (\`<ul>\`, \`<ol>\`) to a single "Text" component with newlines.
-*   Map \`<img>\` tags to "Image" components.
-*   Map \`<table>\` tags to "Table" components.
-*   Map \`<hr>\` to "Divider" components.
-*   You must generate a unique UUID for each component's "id" field.
+*   Generate a unique UUID for each component's "id" field.
 
 **Return CSV only**: Your entire output must be a single, valid CSV formatted string.
-
-**Example Input Text:**
-"For sale: A 2-bedroom apartment in Indiranagar by Emaar. 1200 sqft, 1.2 Cr. Description: <h2>Overview</h2><p>A great place to live with <i>fantastic</i> views.</p>"
-
-**Example Output CSV:**
-title,location,developer,price,type,bedrooms,bathrooms,area,images,description
-"2BHK Apartment in Indiranagar",Indiranagar,Emaar,12000000,Apartment,2,2,1200,"https://placehold.co/800x600.png","[{\\"id\\":\\"...",\\"type\\":\\"Text\\",\\"text\\":\\"Overview\\",\\"size\\":\\"lg\\",\\"align\\":\\"left\\",\\"color\\":\\"default\\",\\"style\\":[]},{\\"id\\":\\"...",\\"type\\":\\"Text\\",\\"text\\":\\"A great place to live with fantastic views.\\",\\"size\\":\\"md\\",\\"align\\":\\"left\\",\\"color\\":\\"default\\",\\"style\\":[\\"italic\\"]}]"
 `;
 
 function AiPromptCard() {
@@ -116,13 +108,26 @@ export default function BulkUploadPage() {
             skipEmptyLines: true,
             complete: (results) => {
                 const sanitizedData = results.data.map(row => ({
-                    ...row,
+                    title: row.title || '',
+                    location: {
+                        address: row.address || '',
+                        locality: row.locality || '',
+                        lat: parseFloat(row.lat) || 0,
+                        lng: parseFloat(row.lng) || 0,
+                    },
+                    bhk: row.bhk || '',
                     price: parseFloat(row.price) || 0,
-                    bedrooms: parseInt(row.bedrooms, 10) || 0,
-                    bathrooms: parseInt(row.bathrooms, 10) || 0,
-                    area: parseInt(row.area, 10) || 0,
+                    propertyType: row.propertyType || '',
+                    builtUpArea: parseFloat(row.builtUpArea) || 0,
+                    furnishing: row.furnishing || '',
+                    projectName: row.projectName || '',
+                    description: row.description || '[]',
                     images: row.images ? row.images.split(',').map(url => url.trim()) : [],
-                    description: row.description || '[]'
+                    floor: parseInt(row.floor, 10) || 0,
+                    age: row.age || '',
+                    facing: row.facing || '',
+                    amenities: row.amenities ? row.amenities.split(',').map(a => a.trim()) : [],
+                    ownerContact: row.ownerContact || '',
                 }));
                 setParsedData(sanitizedData);
                 setIsParsing(false);
@@ -157,10 +162,8 @@ export default function BulkUploadPage() {
             CSV_TEMPLATE_HEADERS.join(','),
             ...CSV_TEMPLATE_DATA.map(row =>
                 row.map((cell, index) => {
-                    if (index === 9) {
-                        return `"${cell.replace(/"/g, '""')}"`;
-                    }
-                    return `"${cell}"`;
+                    // Quote all fields, especially those with commas
+                    return `"${(cell.toString() || '').replace(/"/g, '""')}"`;
                 }).join(',')
             )
         ].join('\n');
@@ -222,7 +225,7 @@ export default function BulkUploadPage() {
                                 id="csv-paste" 
                                 value={csvText} 
                                 onChange={(e) => setCsvText(e.target.value)}
-                                placeholder="title,location,price..."
+                                placeholder={CSV_TEMPLATE_HEADERS.join(',')}
                                 className="min-h-[150px] font-code text-xs"
                               />
                            </div>
@@ -254,7 +257,7 @@ export default function BulkUploadPage() {
                                         {parsedData.slice(0, 5).map((row, index) => (
                                             <TableRow key={index}>
                                                 <TableCell className="font-medium">{row.title}</TableCell>
-                                                <TableCell>{row.location}</TableCell>
+                                                <TableCell>{row.location.address}</TableCell>
                                                 <TableCell>{row.price}</TableCell>
                                             </TableRow>
                                         ))}

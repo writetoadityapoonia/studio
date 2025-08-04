@@ -1,3 +1,8 @@
+// This file is no longer used for the primary database connection,
+// but might be kept for other potential direct MongoDB interactions
+// if needed in the future. The main connection is now handled by
+// `src/lib/mongoose.js`.
+
 import { MongoClient } from 'mongodb';
 
 const MONGODB_URI = process.env.MONGODB_URI;
