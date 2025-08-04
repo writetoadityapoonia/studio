@@ -14,16 +14,15 @@ import { bulkCreateProperties } from '@/lib/actions';
 
 const CSV_TEMPLATE_HEADERS = ['title', 'location', 'developer', 'price', 'type', 'bedrooms', 'bathrooms', 'area', 'images', 'description'];
 const CSV_TEMPLATE_DATA = [
-    ['Elegant 3BHK Apartment', 'Koramangala, Bengaluru', 'Prestige Group', 15000000, 'Apartment', 3, 2, 1600, 'https://placehold.co/800x600.png,https://placehold.co/800x600.png', '[]'],
+    ['Elegant 3BHK Apartment', 'Koramangala, Bengaluru', 'Prestige Group', 15000000, 'Apartment', 3, 2, 1600, 'https://placehold.co/800x600.png,https://placehold.co/800x600.png', '[{"id":"a1b2c3d4","type":"Text","text":"A beautiful apartment."}]'],
     ['Luxury Villa with Pool', 'Whitefield, Bengaluru', 'Sobha Ltd', 50000000, 'Villa', 4, 4, 3500, 'https://placehold.co/800x600.png', '[]']
 ];
 
-const AI_PROMPT = `You are an expert real estate data entry specialist. Your task is to convert unstructured text describing one or more properties into a structured CSV format.
+const AI_PROMPT = `You are an expert real estate data entry specialist and content migrator. Your task is to convert unstructured text or HTML describing multiple properties into a structured CSV format.
 
-**Your Goal:** Convert the provided text into a valid CSV string that can be uploaded to a database. The first line of the CSV must be the header row, and all subsequent rows will be the property data.
+**Your Goal:** Convert the provided text into a single, valid CSV string. The first line of the CSV must be the header row, and all subsequent rows will be the property data.
 
 **CSV Headers (must be in this order):**
-
 \`title,location,developer,price,type,bedrooms,bathrooms,area,images,description\`
 
 **Column Instructions:**
@@ -36,23 +35,35 @@ const AI_PROMPT = `You are an expert real estate data entry specialist. Your tas
 6.  **bedrooms**: The number of bedrooms.
 7.  **bathrooms**: The number of bathrooms.
 8.  **area**: The size of the property in square feet (sqft).
-9.  **images**: A comma-separated list of image URLs. If multiple images, separate them with a comma inside a single quoted string if necessary (e.g., "url1,url2"). For placeholders, use \`https://placehold.co/800x600.png\`.
-10. **description**: A JSON array representing the property's detailed description. For now, you can leave this as an empty array: \`[]\`.
+9.  **images**: A comma-separated list of image URLs. For placeholders, use \`https://placehold.co/800x600.png\`.
+10. **description (Important!)**: This must be a JSON array representing the property's detailed description. If the source text contains HTML or rich formatting, you must convert it to the JSON format specified below. If no description is available, use an empty array: \`[]\`.
 
-**Instructions:**
+**Description JSON Schema:**
 
-1.  **Analyze the Input**: Read the provided text and extract the details for each property.
-2.  **Format as CSV**: Create a CSV string. The first row must be the headers exactly as specified above. Each subsequent row should represent one property with its data in the correct column order.
-3.  **Handle Missing Data**: If a piece of information is not available, leave the corresponding CSV field empty.
-4.  **Return CSV only**: Your entire output must be a single, valid CSV formatted string. Do not include any text or formatting before or after the CSV content.
+*   **Text**: \`{ "id": "uuid", "type": "Text", "text": "...", "size": "sm|md|lg|xl", "align": "left|center|right", "color": "default|primary|muted", "style": ["bold", "italic"] }\`
+*   **Table**: \`{ "id": "uuid", "type": "Table", "headers": ["Header1"], "rows": [["r1c1"]] }\`
+*   **Image**: \`{ "id": "uuid", "type": "Image", "src": "url", "alt": "description" }\`
+*   **Spacer**: \`{ "id": "uuid", "type": "Spacer", "size": "sm|md|lg" }\`
+*   **Divider**: \`{ "id": "uuid", "type": "Divider" }\`
+
+**Conversion Logic:**
+*   Map \`<h1>\`, \`<h2>\` to "Text" components with appropriate sizes.
+*   Map \`<p>\` tags to "Text" components.
+*   Map \`<b>\` or \`<strong>\` to \`"style": ["bold"]\` in Text components.
+*   Map lists (\`<ul>\`, \`<ol>\`) to a single "Text" component with newlines.
+*   Map \`<img>\` tags to "Image" components.
+*   Map \`<table>\` tags to "Table" components.
+*   Map \`<hr>\` to "Divider" components.
+*   You must generate a unique UUID for each component's "id" field.
+
+**Return CSV only**: Your entire output must be a single, valid CSV formatted string.
 
 **Example Input Text:**
-"We have two new listings. First is a 2-bedroom, 2-bath apartment in Indiranagar by Emaar. It's 1200 sqft and costs 1.2 Cr. The second is a commercial plot in Electronic City from Godrej Properties, priced at 80 Lakhs."
+"For sale: A 2-bedroom apartment in Indiranagar by Emaar. 1200 sqft, 1.2 Cr. Description: <h2>Overview</h2><p>A great place to live with <i>fantastic</i> views.</p>"
 
 **Example Output CSV:**
 title,location,developer,price,type,bedrooms,bathrooms,area,images,description
-"2BHK Apartment in Indiranagar",Indiranagar,Emaar,12000000,Apartment,2,2,1200,https://placehold.co/800x600.png,[]
-"Commercial Plot",Electronic City,Godrej Properties,8000000,Plot,0,0,0,https://placehold.co/800x600.png,[]
+"2BHK Apartment in Indiranagar",Indiranagar,Emaar,12000000,Apartment,2,2,1200,https://placehold.co/800x600.png,"[{\"id\":\"...\",\"type\":\"Text\",\"text\":\"Overview\",\"size\":\"lg\",\"align\":\"left\",\"color\":\"default\",\"style\":[]},{\"id\":\"...\",\"type\":\"Text\",\"text\":\"A great place to live with fantastic views.\",\"size\":\"md\",\"align\":\"left\",\"color\":\"default\",\"style\":[\"italic\"]}]"
 `;
 
 function AiPromptCard() {
@@ -104,20 +115,20 @@ export default function BulkUploadPage() {
                 header: true,
                 skipEmptyLines: true,
                 complete: (results) => {
-                    // Convert numeric fields from string to number
                     const sanitizedData = results.data.map(row => ({
                         ...row,
                         price: parseFloat(row.price) || 0,
                         bedrooms: parseInt(row.bedrooms, 10) || 0,
                         bathrooms: parseInt(row.bathrooms, 10) || 0,
                         area: parseInt(row.area, 10) || 0,
-                        images: row.images ? row.images.split(',').map(url => url.trim()) : []
+                        images: row.images ? row.images.split(',').map(url => url.trim()) : [],
+                        description: row.description || '[]'
                     }));
                     setParsedData(sanitizedData);
                     setIsParsing(false);
                 },
-                error: () => {
-                    toast({ title: "Parsing Error", description: "Could not parse the CSV file.", variant: "destructive" });
+                error: (err) => {
+                    toast({ title: "Parsing Error", description: `Could not parse the CSV file. ${err.message}`, variant: "destructive" });
                     setIsParsing(false);
                 }
             });
@@ -125,10 +136,20 @@ export default function BulkUploadPage() {
     };
 
     const downloadTemplate = () => {
+        // Ensure description is properly quoted
         const csvContent = [
             CSV_TEMPLATE_HEADERS.join(','),
-            ...CSV_TEMPLATE_DATA.map(row => row.map(cell => `"${cell}"`).join(','))
-        ].join('\\n');
+            ...CSV_TEMPLATE_DATA.map(row => 
+                row.map((cell, index) => {
+                    // The description is the 10th column (index 9)
+                    if (index === 9) {
+                        // Double-quote the JSON string to escape it within the CSV
+                        return `"${cell.replace(/"/g, '""')}"`;
+                    }
+                    return `"${cell}"`;
+                }).join(',')
+            )
+        ].join('\n');
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
