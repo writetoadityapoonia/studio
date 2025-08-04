@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Upload, Download, Check, Copy, Loader2, TableIcon } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { bulkCreateProperties } from '@/lib/actions';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 
 const CSV_TEMPLATE_HEADERS = ['title', 'location', 'developer', 'price', 'type', 'bedrooms', 'bathrooms', 'area', 'images', 'description'];
 const CSV_TEMPLATE_DATA = [
@@ -63,7 +65,7 @@ const AI_PROMPT = `You are an expert real estate data entry specialist and conte
 
 **Example Output CSV:**
 title,location,developer,price,type,bedrooms,bathrooms,area,images,description
-"2BHK Apartment in Indiranagar",Indiranagar,Emaar,12000000,Apartment,2,2,1200,https://placehold.co/800x600.png,"[{\"id\":\"...\",\"type\":\"Text\",\"text\":\"Overview\",\"size\":\"lg\",\"align\":\"left\",\"color\":\"default\",\"style\":[]},{\"id\":\"...\",\"type\":\"Text\",\"text\":\"A great place to live with fantastic views.\",\"size\":\"md\",\"align\":\"left\",\"color\":\"default\",\"style\":[\"italic\"]}]"
+"2BHK Apartment in Indiranagar",Indiranagar,Emaar,12000000,Apartment,2,2,1200,"https://placehold.co/800x600.png","[{\\"id\\":\\"...",\\"type\\":\\"Text\\",\\"text\\":\\"Overview\\",\\"size\\":\\"lg\\",\\"align\\":\\"left\\",\\"color\\":\\"default\\",\\"style\\":[]},{\\"id\\":\\"...",\\"type\\":\\"Text\\",\\"text\\":\\"A great place to live with fantastic views.\\",\\"size\\":\\"md\\",\\"align\\":\\"left\\",\\"color\\":\\"default\\",\\"style\\":[\\"italic\\"]}]"
 `;
 
 function AiPromptCard() {
@@ -101,49 +103,61 @@ function AiPromptCard() {
 
 export default function BulkUploadPage() {
     const [file, setFile] = useState(null);
+    const [csvText, setCsvText] = useState('');
     const [parsedData, setParsedData] = useState([]);
     const [isParsing, setIsParsing] = useState(false);
     const [isPending, startTransition] = useTransition();
     const { toast } = useToast();
 
+    const parseCsv = (data) => {
+        setIsParsing(true);
+        Papa.parse(data, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (results) => {
+                const sanitizedData = results.data.map(row => ({
+                    ...row,
+                    price: parseFloat(row.price) || 0,
+                    bedrooms: parseInt(row.bedrooms, 10) || 0,
+                    bathrooms: parseInt(row.bathrooms, 10) || 0,
+                    area: parseInt(row.area, 10) || 0,
+                    images: row.images ? row.images.split(',').map(url => url.trim()) : [],
+                    description: row.description || '[]'
+                }));
+                setParsedData(sanitizedData);
+                setIsParsing(false);
+            },
+            error: (err) => {
+                toast({ title: "Parsing Error", description: `Could not parse the CSV data. ${err.message}`, variant: "destructive" });
+                setIsParsing(false);
+            }
+        });
+    };
+
     const handleFileChange = (e) => {
         const selectedFile = e.target.files[0];
         if (selectedFile) {
             setFile(selectedFile);
-            setIsParsing(true);
-            Papa.parse(selectedFile, {
-                header: true,
-                skipEmptyLines: true,
-                complete: (results) => {
-                    const sanitizedData = results.data.map(row => ({
-                        ...row,
-                        price: parseFloat(row.price) || 0,
-                        bedrooms: parseInt(row.bedrooms, 10) || 0,
-                        bathrooms: parseInt(row.bathrooms, 10) || 0,
-                        area: parseInt(row.area, 10) || 0,
-                        images: row.images ? row.images.split(',').map(url => url.trim()) : [],
-                        description: row.description || '[]'
-                    }));
-                    setParsedData(sanitizedData);
-                    setIsParsing(false);
-                },
-                error: (err) => {
-                    toast({ title: "Parsing Error", description: `Could not parse the CSV file. ${err.message}`, variant: "destructive" });
-                    setIsParsing(false);
-                }
-            });
+            setParsedData([]);
+            parseCsv(selectedFile);
         }
     };
 
+    const handlePasteParse = () => {
+        if (!csvText.trim()) {
+            toast({ title: "No Content", description: "Please paste your CSV content in the text area.", variant: "destructive" });
+            return;
+        }
+        setParsedData([]);
+        parseCsv(csvText);
+    }
+
     const downloadTemplate = () => {
-        // Ensure description is properly quoted
         const csvContent = [
             CSV_TEMPLATE_HEADERS.join(','),
-            ...CSV_TEMPLATE_DATA.map(row => 
+            ...CSV_TEMPLATE_DATA.map(row =>
                 row.map((cell, index) => {
-                    // The description is the 10th column (index 9)
                     if (index === 9) {
-                        // Double-quote the JSON string to escape it within the CSV
                         return `"${cell.replace(/"/g, '""')}"`;
                     }
                     return `"${cell}"`;
@@ -173,6 +187,7 @@ export default function BulkUploadPage() {
                 toast({ title: "Upload Successful", description: `${result.insertedCount} properties have been added.` });
                 setFile(null);
                 setParsedData([]);
+                setCsvText('');
             } catch (error) {
                 toast({ title: "Upload Failed", description: error.message || "An error occurred during bulk upload.", variant: "destructive" });
             }
@@ -184,20 +199,44 @@ export default function BulkUploadPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Bulk Upload Properties</CardTitle>
-                    <CardDescription>Upload a CSV file with property data to add multiple listings at once.</CardDescription>
+                    <CardDescription>Upload properties by uploading a CSV file or pasting CSV content directly.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <div className="space-y-2">
-                        <Label htmlFor="csv-upload">Upload CSV File</Label>
-                        <div className="flex gap-2">
-                            <Input id="csv-upload" type="file" accept=".csv" onChange={handleFileChange} className="flex-grow" />
-                            <Button onClick={downloadTemplate} variant="outline">
-                                <Download className="mr-2" /> Template
-                            </Button>
-                        </div>
+                    <Tabs defaultValue="file">
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="file">Upload File</TabsTrigger>
+                            <TabsTrigger value="paste">Paste Content</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="file" className="pt-4 space-y-4">
+                             <div className="space-y-2">
+                                <Label htmlFor="csv-upload">Upload CSV File</Label>
+                                <div className="flex gap-2">
+                                    <Input id="csv-upload" type="file" accept=".csv" onChange={handleFileChange} className="flex-grow" />
+                                </div>
+                            </div>
+                        </TabsContent>
+                        <TabsContent value="paste" className="pt-4 space-y-4">
+                           <div className="space-y-2">
+                             <Label htmlFor="csv-paste">Paste CSV Content</Label>
+                             <Textarea 
+                                id="csv-paste" 
+                                value={csvText} 
+                                onChange={(e) => setCsvText(e.target.value)}
+                                placeholder="title,location,price..."
+                                className="min-h-[150px] font-code text-xs"
+                              />
+                           </div>
+                           <Button onClick={handlePasteParse} className="w-full">Parse Pasted Content</Button>
+                        </TabsContent>
+                    </Tabs>
+                    
+                     <div className="space-y-2">
+                         <Button onClick={downloadTemplate} variant="outline" className="w-full">
+                            <Download className="mr-2" /> Download CSV Template
+                        </Button>
                     </div>
 
-                    {isParsing && <div className="flex items-center text-muted-foreground"><Loader2 className="mr-2 animate-spin" />Parsing file...</div>}
+                    {isParsing && <div className="flex items-center text-muted-foreground"><Loader2 className="mr-2 animate-spin" />Parsing...</div>}
 
                     {parsedData.length > 0 && (
                         <div className="space-y-4">
