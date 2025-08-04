@@ -31,9 +31,9 @@ import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '@/lib/cloudinar
 import Autocomplete from 'react-google-autocomplete';
 
 
-const AI_PROMPT = `You are an expert real estate copywriter. Your task is to take raw, factual text about a property and transform it into a structured JSON array that can be used by a web application's description builder.
+const AI_PROMPT = `You are an expert content migration specialist. Your task is to take raw text or HTML and convert it into a structured JSON array that can be used by a web application's description builder.
 
-**Your Goal:** Convert the provided text into a JSON array of components. The final output must be only the JSON array, without any commentary or wrapper. Each object in the array represents a component like text, a table, or a divider.
+**Your Goal:** Convert the provided text/HTML into a valid JSON array of components. The final output must be only the JSON array, without any commentary or wrapper.
 
 **JSON Component Schema:**
 
@@ -41,7 +41,7 @@ You must use the following component types and schemas:
 
 1.  **Text**: For headings and paragraphs.
     *   \`{ "id": "uuid", "type": "Text", "text": "...", "size": "sm|md|lg|xl", "align": "left|center|right", "color": "default|primary|muted", "style": ["bold", "italic"] }\`
-2.  **Table**: For structured data like highlights or unit configurations.
+2.  **Table**: For structured data.
     *   \`{ "id": "uuid", "type": "Table", "headers": ["Header1", "Header2"], "rows": [["r1c1", "r1c2"], ["r2c1", "r2c2"]] }\`
 3.  **Image**: For images.
     *   \`{ "id": "uuid", "type": "Image", "src": "url", "alt": "description" }\`
@@ -52,29 +52,30 @@ You must use the following component types and schemas:
 
 **Instructions:**
 
-1.  **Analyze the Input**: Read the provided text and identify the different sections (e.g., introduction, highlights, amenities).
+1.  **Analyze the Input**: Read the provided content (which can be plain text or HTML) and identify the different sections.
 2.  **Generate IDs**: For each component object, generate a unique UUID for the "id" field.
-3.  **Map to Components**:
-    *   Use "Text" components for titles, paragraphs, and lists. Use different sizes for headings (\`xl\`, \`lg\`) and body text (\`md\`).
-    *   Use "Table" components for tabular data.
-    *   Use "Divider" components to separate major sections.
-    *   Use "Spacer" components to add breathing room where appropriate.
-4.  **Return JSON only**: Your entire output must be a single, valid JSON array. Do not include any text or formatting before or after the JSON.
+3.  **Map HTML/Text to Components**:
+    *   \`<h1>\`, \`<h2>\`: Map to "Text" components with \`size: "xl"\` or \`"lg"\`.
+    *   \`<p>\`: Map to "Text" component with \`size: "md"\`.
+    *   \`<b>\`, \`<strong>\`: Use the "style" array with a value of \`"bold"\`.
+    *   \`<i>\`, \`<em>\`: Use the "style" array with a value of \`"italic"\`.
+    *   \`<ul>\`, \`<ol>\`: Convert lists into a single "Text" component, using newline characters (\\n) and dashes (-) or numbers to format the list items.
+    *   \`<br>\`: Can be interpreted as a "Spacer" component or preserved as newlines within a "Text" component.
+    *   \`<img>\`: Map to an "Image" component, extracting the \`src\` and \`alt\` attributes.
+    *   \`<table>\`: Map to a "Table" component, parsing \`<thead>\`, \`<tbody>\`, \`<tr>\`, \`<th>\`, and \`<td>\` tags to populate the headers and rows.
+    *   \`<hr>\`: Map to a "Divider" component.
+4.  **Return JSON only**: Your entire output must be a single, valid JSON array.
 
-**Example Input Text:**
-"Amazing Downtown Loft
-This sunny loft has 2 beds, 2 baths, and is 1200 sqft.
-Features:
-- Rooftop Deck
-- Gym"
+**Example Input HTML:**
+"<h1>Sunshine Apartments</h1><p>A beautiful place to live with <strong>2 bedrooms</strong> and a great city view. It is <i>1200 sqft</i>.</p><hr><h2>Amenities</h2><ul><li>Swimming Pool</li><li>Gym</li></ul>"
 
 **Example Output JSON:**
 [
-  {"id": "c7a8f1e2-b3d4-c5e6-f7a8-b9c0d1e2f3a4", "type": "Text", "text": "Amazing Downtown Loft", "size": "xl", "align": "left", "color": "default", "style": ["bold"]},
-  {"id": "d8b9e2f3-c4d5-d6e7-g8b9-c0d1e2f3a4b5", "type": "Text", "text": "This sunny loft has 2 beds, 2 baths, and is 1200 sqft.", "size": "md", "align": "left", "color": "default", "style": []},
-  {"id": "e9c0f3a4-d5e6-e7f8-h9c0-d1e2f3a4b5c6", "type": "Table", "headers": ["Feature", "Details"], "rows": [["Beds", "2"], ["Baths", "2"], ["Area", "1200 sqft"]]},
-  {"id": "f0d1a4b5-e6f7-f8g9-i0d1-e2f3a4b5c6d7", "type": "Text", "text": "Features:", "size": "lg", "align": "left", "color": "default", "style": []},
-  {"id": "01e2b5c6-f7g8-g9h0-j1e2-f3a4b5c6d7e8", "type": "Text", "text": "- Rooftop Deck\\n- Gym", "size": "md", "align": "left", "color": "default", "style": []}
+  {"id": "a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6", "type": "Text", "text": "Sunshine Apartments", "size": "xl", "align": "left", "color": "default", "style": ["bold"]},
+  {"id": "b2c3d4e5-f6a7-b8c9-d0e1-f2a3b4c5d6e7", "type": "Text", "text": "A beautiful place to live with 2 bedrooms and a great city view. It is 1200 sqft.", "size": "md", "align": "left", "color": "default", "style": []},
+  {"id": "c3d4e5f6-a7b8-c9d0-e1f2-a3b4c5d6e7f8", "type": "Divider"},
+  {"id": "d4e5f6a7-b8c9-d0e1-f2a3-b4c5d6e7f8g9", "type": "Text", "text": "Amenities", "size": "lg", "align": "left", "color": "default", "style": ["bold"]},
+  {"id": "e5f6a7b8-c9d0-e1f2-a3b4-c5d6e7f8g9h0", "type": "Text", "text": "- Swimming Pool\\n- Gym", "size": "md", "align": "left", "color": "default", "style": []}
 ]
 `;
 
@@ -95,7 +96,7 @@ function PromptCard() {
             <CardHeader>
                 <CardTitle>AI Prompt for JSON Generation</CardTitle>
                 <CardDescription>
-                    Use this prompt with an external AI (like Gemini or ChatGPT) to convert plain text into the required JSON format.
+                    Use this prompt with an external AI (like Gemini or ChatGPT) to convert plain text or HTML into the required JSON format.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -845,7 +846,7 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
     const newDescription = e.target.value;
     setProperty(prev => ({...prev, description: newDescription}));
     try {
-        parseDescription(newDescription);
+        JSON.parse(newDescription);
     } catch(e) {
         // Don't toast here, it would be annoying on every keystroke
     }
@@ -1150,7 +1151,3 @@ export default function PropertyEditPage() {
     </ClientOnly>
   );
 }
-
-    
-
-    
