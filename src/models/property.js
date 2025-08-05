@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const CommercialPropertySchema = new mongoose.Schema({
+const PropertySchema = new mongoose.Schema({
   title: { type: String, required: true },
   location: {
     address: { type: String, required: true },
@@ -32,10 +32,14 @@ const CommercialPropertySchema = new mongoose.Schema({
 });
 
 // Create a 2dsphere index for geospatial queries
-CommercialPropertySchema.index({ 'location.coordinates': '2dsphere' });
+PropertySchema.index({ 'location.coordinates': '2dsphere' });
+
+// Create a text index for searching
+PropertySchema.index({ title: 'text', 'location.address': 'text', 'location.locality': 'text', projectName: 'text' });
+
 
 // Pre-save middleware to ensure coordinates are set
-CommercialPropertySchema.pre('save', function(next) {
+PropertySchema.pre('save', function(next) {
   if (this.isModified('location.lat') || this.isModified('location.lng')) {
     if (this.location.lat && this.location.lng) {
       this.location.coordinates = {
@@ -47,4 +51,4 @@ CommercialPropertySchema.pre('save', function(next) {
   next();
 });
 
-export default mongoose.models.Property || mongoose.model('Property', CommercialPropertySchema);
+export default mongoose.models.Property || mongoose.model('Property', PropertySchema);

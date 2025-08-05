@@ -682,7 +682,7 @@ function PropertyEditForm({ property: initialProperty, propertyTypes, isNew }) {
   };
 
   useEffect(() => {
-    const initialComponents = parseDescription(initialProperty.description || '[]');
+    const initialComponents = parseDescription(initialProperty?.description || '[]');
     setComponents(initialComponents);
   }, [initialProperty]);
 
@@ -1179,7 +1179,9 @@ export default function PropertyEditPage() {
   
 
   useEffect(() => {
-    getPropertyTypes().then(setPropertyTypes);
+    getPropertyTypes().then(data => {
+        if (data) setPropertyTypes(data);
+    });
 
     if (!isNew && id) {
       setLoading(true);
@@ -1190,6 +1192,9 @@ export default function PropertyEditPage() {
           toast({ title: "Property not found", variant: "destructive" });
         }
         setLoading(false);
+      }).catch(err => {
+          setLoading(false);
+          toast({ title: "Error fetching property", description: err.message, variant: "destructive" });
       });
     } else {
         setProperty({});

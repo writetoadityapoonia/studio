@@ -17,7 +17,7 @@ async function getPropertyTypesCollection() {
 
 function processDocument(doc) {
     if (!doc) return null;
-    const plainDoc = doc.toObject({ virtuals: true });
+    const plainDoc = doc.toObject({ virtuals: true, getters: true });
     plainDoc.id = plainDoc._id.toString();
     delete plainDoc._id;
     delete plainDoc.__v;
@@ -27,7 +27,7 @@ function processDocument(doc) {
 
 export async function getProperties(searchParams = {}) {
   await connectToDatabase();
-  const { lat, lng, type, minPrice, maxPrice, limit, page = 1 } = searchParams;
+  const { lat, lng, type, minPrice, maxPrice, limit, page = 1, search } = searchParams;
   
   let query = {};
 
@@ -61,6 +61,11 @@ export async function getProperties(searchParams = {}) {
       if (maxPrice && parseFloat(maxPrice) < 100000000) { // Check against max range
           query.price.$lte = parseFloat(maxPrice);
       }
+  }
+  
+  // This is a server-side text search if fuse.js isn't used or for initial load
+  if (search) {
+      query.$text = { $search: search };
   }
   
   let queryBuilder = Property.find(query).sort({ createdAt: -1 });
@@ -129,11 +134,13 @@ export async function getAllEnquiriesWithPropertyInfo() {
         }
     ]).toArray();
 
-    return enquiries;
+    // The result from aggregate is already plain objects, but let's ensure consistency
+    return JSON.parse(JSON.stringify(enquiries));
 }
 
 export async function getPropertyTypes() {
   const collection = await getPropertyTypesCollection();
   const types = await collection.find({}).sort({ name: 1 }).toArray();
-  return types.map(t => ({...t, id: t._id.toString()}));
+  // The result from find().toArray() is already plain objects, but let's ensure consistency
+  return JSON.parse(JSON.stringify(types.map(t => ({...t, id: t._id.toString()}))));
 }

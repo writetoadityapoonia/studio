@@ -42,9 +42,8 @@ function PropertyListSkeleton({ view = 'grid' }) {
     )
 }
 
-function PageClient({ initialProperties, propertyTypes }) {
+function PageClient({ initialProperties, propertyTypes, searchParams }) {
     const [view, setView] = useState('grid');
-    const searchParams = useSearchParams();
     const hasSearchResults = searchParams.has('lat') && searchParams.has('lng');
 
     return (
@@ -79,7 +78,6 @@ function PageClient({ initialProperties, propertyTypes }) {
                     </div>
                     
                     <PropertyList 
-                        key={searchParams.toString()} 
                         initialProperties={initialProperties} 
                         searchParams={searchParams} 
                         view={view} 
@@ -113,8 +111,7 @@ function PropertiesPageSkeleton() {
     )
 }
 
-
-function PropertiesPage({ searchParams }) {
+function PropertiesPageInner({ searchParams }) {
     const [properties, setProperties] = useState([]);
     const [propertyTypes, setPropertyTypes] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -122,15 +119,20 @@ function PropertiesPage({ searchParams }) {
     useEffect(() => {
         async function loadData() {
             setLoading(true);
-            // Convert searchParams to a plain object for the server action
-            const params = Object.fromEntries(searchParams.entries());
-            const [props, types] = await Promise.all([
-                getProperties({ ...params, limit: 6, page: 1 }),
-                getPropertyTypes()
-            ]);
-            setProperties(props);
-            setPropertyTypes(types);
-            setLoading(false);
+            const params = Object.fromEntries(new URLSearchParams(searchParams));
+            
+            try {
+                const [props, types] = await Promise.all([
+                    getProperties({ ...params, limit: 6, page: 1 }),
+                    getPropertyTypes()
+                ]);
+                setProperties(props);
+                setPropertyTypes(types);
+            } catch (error) {
+                console.error("Failed to load initial data:", error);
+            } finally {
+                setLoading(false);
+            }
         }
         loadData();
     }, [searchParams]);
@@ -143,11 +145,12 @@ function PropertiesPage({ searchParams }) {
         <PageClient
             initialProperties={properties}
             propertyTypes={propertyTypes}
+            searchParams={new URLSearchParams(searchParams)}
         />
     );
 }
 
-export default function PropertiesPageWrapper() {
+export default function PropertiesPage() {
     return (
         <Suspense fallback={<PropertiesPageSkeleton />}>
             <PropertiesPageWithSearchParams />
@@ -157,5 +160,6 @@ export default function PropertiesPageWrapper() {
 
 function PropertiesPageWithSearchParams() {
     const searchParams = useSearchParams();
-    return <PropertiesPage searchParams={searchParams} />;
+    // Pass searchParams as a plain object to avoid serialization issues
+    return <PropertiesPageInner searchParams={searchParams.toString()} />;
 }
